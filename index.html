@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador Hidrográfico e Tempo de Chegada — RS 2024</title>
+    <title>Simulador Hidrográfico Completo — RS 2026</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -14,13 +14,6 @@
             background-image: linear-gradient(rgba(15, 23, 42, 0.15) 1px, transparent 1px),
                               linear-gradient(90deg, rgba(15, 23, 42, 0.15) 1px, transparent 1px);
             background-size: 24px 24px;
-        }
-        @keyframes pulse-node {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.15); opacity: 0.85; }
-        }
-        .node-pulse {
-            animation: pulse-node 2s infinite ease-in-out;
         }
     </style>
 </head>
@@ -34,8 +27,8 @@
                     <i class="fa-solid fa-water text-white text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">Simulador Hidrográfico: Tempos e Rios (RS 2024)</h1>
-                    <p class="text-[11px] text-slate-400">Do Noroeste e Serras até ao Oceano Atlântico</p>
+                    <h1 class="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">Simulador Hidrográfico Completo (RS 2026)</h1>
+                    <p class="text-[11px] text-slate-400">Do Noroeste e Serras até ao Oceano Atlântico com Controlo Temporal e Chuva (mm)</p>
                 </div>
             </div>
             <div class="flex items-center gap-3 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
@@ -46,25 +39,25 @@
     </header>
 
     <!-- Conteúdo Principal -->
-    <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
 
-        <!-- Painel Esquerdo -->
+        <!-- Painel Esquerdo: Controlos e Chuva -->
         <div class="lg:col-span-1 space-y-5">
             
-            <!-- Controles -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+            <!-- Controlos de Simulação -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                    <i class="fa-solid fa-sliders"></i> Controles da Simulação
+                    <i class="fa-solid fa-sliders"></i> Controlos
                 </h3>
                 <div class="grid grid-cols-2 gap-2">
-                    <button onclick="togglePlay()" id="play-btn" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-play" id="play-icon"></i> <span id="play-text">Rodar</span>
+                    <button onclick="togglePlay()" id="play-btn" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play" id="play-icon"></i> <span id="play-text">Iniciar</span>
                     </button>
-                    <button onclick="resetSim()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-rotate-right"></i> Reset
+                    <button onclick="resetSim()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i> Reiniciar
                     </button>
                 </div>
-                <div class="space-y-1.5 pt-2">
+                <div class="space-y-1 pt-1">
                     <div class="flex justify-between text-[11px] text-slate-400">
                         <span>Velocidade</span>
                         <span id="speed-label">6h / seg</span>
@@ -73,13 +66,14 @@
                 </div>
             </div>
 
-            <!-- Fatores de Chuva (Ajustados para começar do 0mm) -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+            <!-- Fatores de Chuva por Região -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                    <i class="fa-solid fa-cloud-rain"></i> Chuva por Região (Fontes)
+                    <i class="fa-solid fa-cloud-rain"></i> Chuva por Região (mm)
                 </h3>
+                <p class="text-[10px] text-slate-400">Altere os mm para recalcular dinamicamente os tempos de transbordo.</p>
                 
-                <div class="space-y-3">
+                <div class="space-y-2.5">
                     <div>
                         <div class="flex justify-between text-[11px] text-slate-300 mb-1">
                             <span>Serra / Noroeste (Cabeceiras)</span>
@@ -106,39 +100,28 @@
                 </div>
             </div>
 
-            <!-- Legenda -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Legenda de Alerta</h3>
-                <div class="space-y-2 text-xs">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
-                        <span class="text-slate-300">Normal (&lt;60% da cota)</span>
-                    </div>
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-3 h-3 rounded-full bg-amber-500"></div>
-                        <span class="text-slate-300">Alerta (60–100% da cota)</span>
-                    </div>
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-3 h-3 rounded-full bg-rose-600"></div>
-                        <span class="text-slate-300">Transbordo (&gt;100% / Inundação)</span>
-                    </div>
-                    <div class="flex items-center gap-2.5 pt-1 border-t border-slate-800">
-                        <div class="w-2.5 h-2.5 rounded-full bg-blue-400 animate-ping"></div>
-                        <span class="text-slate-400 text-[11px]">Fluxo de água em trânsito</span>
+            <!-- Painel de Alertas Ativos da Proteção Civil -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Alertas Ativos (2026)
+                </h3>
+                <div id="active-alerts-container" class="space-y-2 text-xs">
+                    <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-center">
+                        Nenhum alerta crítico ativo no momento.
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- Área do Mapa -->
+        <!-- Área Central: Mapa e Detalhes -->
         <div class="lg:col-span-3 space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl relative flex flex-col">
                 
                 <!-- Barra superior do mapa -->
                 <div class="bg-slate-950/80 backdrop-blur border-b border-slate-800 px-4 py-3 flex justify-between items-center text-xs">
                     <span class="font-semibold text-slate-300 flex items-center gap-2">
-                        <i class="fa-solid fa-map text-blue-400"></i> Bacias, Rios e Tempos de Chegada (Noroeste → Mar)
+                        <i class="fa-solid fa-map text-blue-400"></i> Bacias, Rios e Previsão (Noroeste → Mar)
                     </span>
                     <div class="flex gap-2">
                         <button onclick="zoomIn()" class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 flex items-center justify-center"><i class="fa-solid fa-plus text-[10px]"></i></button>
@@ -148,27 +131,27 @@
                 </div>
 
                 <!-- Canvas -->
-                <div class="relative w-full h-[520px] overflow-hidden map-canvas flex items-center justify-center">
+                <div class="relative w-full h-[440px] md:h-[500px] overflow-hidden map-canvas flex items-center justify-center">
                     <canvas id="hydroCanvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
                 </div>
 
                 <!-- Painel Detalhado do Nó Selecionado -->
-                <div class="bg-slate-950 border-t border-slate-800 p-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                <div class="bg-slate-950 border-t border-slate-800 p-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                     <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Rio / Bacia Selecionada</span>
-                        <span id="info-node-name" class="font-bold text-white text-sm">Clique num nó do mapa</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Cidades / Região Afetada</span>
+                        <span id="info-node-cities" class="font-bold text-white text-xs">Selecione um nó no mapa</span>
                     </div>
                     <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Tempo de Chegada da Água</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Tempo Estimado p/ Chegada</span>
                         <span id="info-node-time" class="font-mono text-cyan-400 font-bold text-sm">-- h</span>
                     </div>
                     <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Tempo até Transbordar (Inundação)</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Tempo até Transbordar</span>
                         <span id="info-node-flood" class="font-mono text-rose-400 font-bold text-sm">-- h</span>
                     </div>
                     <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Status e Cota</span>
-                        <span id="info-node-status" class="text-slate-300 text-xs">Aguardando início</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Ação da Proteção Civil</span>
+                        <span id="info-node-action" class="text-cyan-300 font-medium text-xs">Aguardando dados</span>
                     </div>
                 </div>
 
@@ -179,10 +162,10 @@
 
     <!-- Rodapé -->
     <footer class="max-w-7xl mx-auto px-4 py-6 mt-6 border-t border-slate-800 text-center text-xs text-slate-500">
-        <p>Plataforma de Simulação de Cheias com controlo de precipitação real e análise de tempos por bacia hidrográfica (RS 2024).</p>
+        <p>Plataforma Hidrográfica Completa com controlo temporal, precipitação em mm e alertas de proteção civil (RS 2026).</p>
     </footer>
 
-    <!-- Script de Simulação -->
+    <!-- Script de Simulação Completa -->
     <script>
         const canvas = document.getElementById('hydroCanvas');
         const ctx = canvas.getContext('2d');
@@ -197,56 +180,74 @@
             { 
                 id: 'noroeste', 
                 name: 'Rio Uruguai / Noroeste', 
+                cities: 'Uruguaiana, Itapiranga, Porto Vera Cruz',
                 x: 0.35, y: 0.15, 
-                level: 1.85, maxLevel: 4.5, rain: 50, 
-                arrivalTime: 0, floodTime: 24, 
-                status: 'Normal', color: '#10b981', 
-                desc: 'Cabeceiras no Noroeste. Acumula água proporcionalmente ao volume de chuva inserido.' 
+                level: 1.85, maxLevel: 4.5,
+                baseArrival: 0, baseFlood: 24,
+                rainRef: 'serra',
+                status: 'Normal', color: '#10b981',
+                action: 'Manter monitorização de encostas.',
+                desc: 'Cabeceiras no Noroeste. Risco de enxurradas rápidas.' 
             },
             { 
                 id: 'serra', 
                 name: 'Rio Taquari (Serra & Vales)', 
+                cities: 'Muçum, Roca Sales, Lajeado, Estrela',
                 x: 0.65, y: 0.22, 
-                level: 1.60, maxLevel: 6.2, rain: 50, 
-                arrivalTime: 4, floodTime: 14, 
-                status: 'Normal', color: '#10b981', 
-                desc: 'Vales estreitos. Reage rapidamente a volumes elevados de precipitação nas encostas.' 
+                level: 1.60, maxLevel: 6.2,
+                baseArrival: 4, baseFlood: 14,
+                rainRef: 'serra',
+                status: 'Normal', color: '#10b981',
+                action: '⚠️ EVACUAÇÃO IMEDIATA nas áreas ribeirinhas!',
+                desc: 'Vales estreitos. Resposta muito rápida a volumes altos nas encostas.' 
             },
             { 
                 id: 'jacui', 
                 name: 'Rio Jacuí (Centro do RS)', 
+                cities: 'Cachoeira do Sul, Santa Maria, Pantano Grande',
                 x: 0.45, y: 0.40, 
-                level: 2.10, maxLevel: 5.8, rain: 30, 
-                arrivalTime: 8, floodTime: 22, 
-                status: 'Normal', color: '#10b981', 
-                desc: 'Coletor central que drena as águas vindas do interior do estado.' 
+                level: 2.10, maxLevel: 5.8,
+                baseArrival: 8, baseFlood: 22,
+                rainRef: 'jacui',
+                status: 'Normal', color: '#10b981',
+                action: 'Alerta de interdição de pontes e estradas.',
+                desc: 'Coletor central que drena volumes do interior.' 
             },
             { 
                 id: 'metrop', 
                 name: 'Lago Guaíba (Porto Alegre / Sinos)', 
+                cities: 'Porto Alegre, Canoas, São Leopoldo, Novo Hamburgo',
                 x: 0.55, y: 0.60, 
-                level: 2.45, maxLevel: 4.77, rain: 40, 
-                arrivalTime: 16, floodTime: 36, 
-                status: 'Normal', color: '#10b981', 
-                desc: 'Reúne o escoamento de múltiplos rios. Níveis críticos dependem do acúmulo regional.' 
+                level: 2.45, maxLevel: 4.77,
+                baseArrival: 16, baseFlood: 36,
+                rainRef: 'metrop',
+                status: 'Normal', color: '#10b981',
+                action: '🚨 Fechamento de comportas e alerta metropolitano!',
+                desc: 'Reúne os principais rios e atinge cotas críticas.' 
             },
             { 
                 id: 'lagoon', 
                 name: 'Lagoa dos Patos (Zona Sul)', 
+                cities: 'Pelotas, São Lourenço do Sul, Tapes',
                 x: 0.48, y: 0.80, 
-                level: 1.15, maxLevel: 3.2, rain: 20, 
-                arrivalTime: 48, floodTime: 96, 
-                status: 'Normal', color: '#10b981', 
-                desc: 'A onda de cheia migra para o sul, elevando o nível da lagoa gradualmente.' 
+                level: 1.15, maxLevel: 3.2,
+                baseArrival: 36, baseFlood: 72,
+                rainRef: 'serra',
+                status: 'Normal', color: '#10b981',
+                action: 'Preparar abrigos e barreiras móveis.',
+                desc: 'Onda de cheia migrando para o sul do estado.' 
             },
             { 
                 id: 'ocean', 
                 name: 'Oceano Atlântico (Barra de Rio Grande)', 
+                cities: 'Rio Grande, Cassino, São José do Norte',
                 x: 0.52, y: 0.95, 
-                level: 0.40, maxLevel: 1.5, rain: 10, 
-                arrivalTime: 72, floodTime: 144, 
-                status: 'Normal', color: '#10b981', 
-                desc: 'Destino final com escoamento condicionado pelas marés e ventos costeiros.' 
+                level: 0.40, maxLevel: 1.5,
+                baseArrival: 50, baseFlood: 100,
+                rainRef: 'serra',
+                status: 'Normal', color: '#10b981',
+                action: 'Monitorização da barra e marés.',
+                desc: 'Gargalo no estuário com represamento da bacia.' 
             }
         ];
 
@@ -257,6 +258,12 @@
             { from: 'metrop', to: 'lagoon' },
             { from: 'lagoon', to: 'ocean' }
         ];
+
+        let rainValues = {
+            serra: 50,
+            jacui: 30,
+            metrop: 40
+        };
 
         let particles = [];
         let isRunning = false;
@@ -313,14 +320,14 @@
             const dot = document.getElementById('sim-status-dot');
 
             if (isRunning) {
-                btn.className = 'px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2';
+                btn.className = 'px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2';
                 icon.className = 'fa-solid fa-pause';
                 text.textContent = 'Pausado';
                 dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
             } else {
-                btn.className = 'px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2';
+                btn.className = 'px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2';
                 icon.className = 'fa-solid fa-play';
-                text.textContent = 'Rodar';
+                text.textContent = 'Iniciar';
                 dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
             }
         }
@@ -330,14 +337,15 @@
             simTimeHours = 0;
             particles = [];
             nodes.forEach(n => {
-                n.level = 1.2;
                 n.status = 'Normal';
                 n.color = '#10b981';
             });
-            document.getElementById('play-btn').className = 'px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2';
+            document.getElementById('play-btn').className = 'px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2';
             document.getElementById('play-icon').className = 'fa-solid fa-play';
-            document.getElementById('play-text').textContent = 'Rodar';
+            document.getElementById('play-text').textContent = 'Iniciar';
             document.getElementById('sim-status-dot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+            document.getElementById('time-display').textContent = 'Dia 0 · 00h · Pausado';
+            updateActiveAlerts();
             if (selectedNode) updateInfoPanel(selectedNode);
         }
 
@@ -348,45 +356,82 @@
 
         function updateRain(region, val) {
             val = parseInt(val);
-            if (region === 'serra') {
-                document.getElementById('val-serra').textContent = `${val} mm`;
-                nodes.find(n => n.id === 'serra').rain = val;
-                nodes.find(n => n.id === 'noroeste').rain = val;
-            } else if (region === 'jacui') {
-                document.getElementById('val-jacui').textContent = `${val} mm`;
-                nodes.find(n => n.id === 'jacui').rain = val;
-            } else if (region === 'metrop') {
-                document.getElementById('val-metrop').textContent = `${val} mm`;
-                nodes.find(n => n.id === 'metrop').rain = val;
-            }
+            rainValues[region] = val;
+            document.getElementById(`val-${region}`).textContent = `${val} mm`;
+            calculateHydroDynamics();
+            updateActiveAlerts();
+            if (selectedNode) updateInfoPanel(selectedNode);
+        }
+
+        function calculateHydroDynamics() {
+            nodes.forEach(node => {
+                let currentRain = rainValues[node.rainRef];
+                let rainFactor = Math.max(currentRain / 100, 0.1);
+                
+                node.calculatedArrivalTime = Math.max(0.5, (node.baseArrival / rainFactor)).toFixed(1);
+                
+                if (currentRain < 70) {
+                    node.calculatedFloodTime = 'Sem risco';
+                    node.status = 'Normal';
+                    node.color = '#10b981';
+                    node.action = 'Monitorização preventiva rotineira.';
+                } else {
+                    let floodHours = (node.baseFlood / (currentRain / 80));
+                    node.calculatedFloodTime = `${floodHours.toFixed(1)}h`;
+                    
+                    if (currentRain >= 250) {
+                        node.status = 'Transbordo';
+                        node.color = '#e11d48';
+                        node.action = '🚨 EVACUAÇÃO URGENTE! Risco extremo de inundação urbana.';
+                    } else if (currentRain >= 120) {
+                        node.status = 'Alerta';
+                        node.color = '#f59e0b';
+                        node.action = '⚠️ Alerta de cheia severa. Preparar abrigos.';
+                    } else {
+                        node.status = 'Atenção';
+                        node.color = '#38bdf8';
+                        node.action = 'Acompanhar boletins meteorológicos locais.';
+                    }
+                }
+            });
         }
 
         function updateInfoPanel(node) {
-            document.getElementById('info-node-name').textContent = node.name;
+            document.getElementById('info-node-cities').textContent = node.cities;
+            document.getElementById('info-node-time').textContent = `~${node.calculatedArrivalTime}h após o início`;
             
-            if (simTimeHours < node.arrivalTime) {
-                document.getElementById('info-node-time').textContent = `Água chega em ~${(node.arrivalTime - simTimeHours).toFixed(1)}h`;
+            if (node.calculatedFloodTime === 'Sem risco') {
+                document.getElementById('info-node-flood').textContent = `Sem risco (Precipitação segura)`;
             } else {
-                document.getElementById('info-node-time').textContent = `Água presente no local`;
+                document.getElementById('info-node-flood').textContent = `~${node.calculatedFloodTime}`;
             }
 
-            // O tempo de transbordo agora ajusta-se dinamicamente conforme a chuva inserida (chuvas baixas evitam transbordo)
-            let dynamicFloodTime = node.floodTime * (300 / Math.max(node.rain, 10));
-            if (node.rain < 80) dynamicFloodTime = 9999; // Se a chuva for fraca, não transborda
+            document.getElementById('info-node-action').textContent = node.action;
+        }
 
-            if (node.rain < 80) {
-                document.getElementById('info-node-flood').textContent = `Sem risco de transbordo (Chuva baixa)`;
-            } else if (simTimeHours < dynamicFloodTime) {
-                document.getElementById('info-node-flood').textContent = `Transborda em ~${(dynamicFloodTime - simTimeHours).toFixed(1)}h`;
-            } else {
-                document.getElementById('info-node-flood').textContent = `⚠️ RIO JÁ TRANSDORBOU!`;
+        function updateActiveAlerts() {
+            const container = document.getElementById('active-alerts-container');
+            let criticalNodes = nodes.filter(n => n.status === 'Transbordo' || n.status === 'Alerta');
+
+            if (criticalNodes.length === 0) {
+                container.innerHTML = `
+                    <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-center">
+                        Nenhum alerta crítico com a precipitação atual.
+                    </div>
+                `;
+                return;
             }
 
-            const statusEl = document.getElementById('info-node-status');
-            statusEl.textContent = `${node.status} — ${node.desc}`;
-            if (node.status === 'Transbordo') statusEl.className = 'text-rose-400 font-semibold';
-            else if (node.status === 'Alerta') statusEl.className = 'text-amber-400 font-semibold';
-            else statusEl.className = 'text-emerald-400 font-semibold';
+            container.innerHTML = criticalNodes.map(n => `
+                <div class="p-3 rounded-xl bg-slate-950 border ${n.status === 'Transbordo' ? 'border-rose-600/50 bg-rose-950/20' : 'border-amber-600/50 bg-amber-950/20'} space-y-1">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-white text-xs">${n.name}</span>
+                        <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${n.status === 'Transbordo' ? 'bg-rose-600 text-white' : 'bg-amber-500 text-slate-950'}">${n.status}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-300"><strong>Cidades:</strong> ${n.cities}</p>
+                    <p class="text-[10px] text-cyan-300 font-medium"><strong>Transbordo em:</strong> ${n.calculatedFloodTime}</p>
+                </div>
+            `).join('');
         }
 
         function updateSimulation(dt) {
@@ -397,40 +442,15 @@
             const hours = Math.floor(simTimeHours % 24);
             document.getElementById('time-display').textContent = `Dia ${days} · ${String(hours).padStart(2, '0')}h · Em Execução`;
 
-            nodes.forEach(node => {
-                let dynamicFloodTime = node.floodTime * (300 / Math.max(node.rain, 10));
-                if (node.rain < 80) dynamicFloodTime = 9999;
-
-                if (simTimeHours >= node.arrivalTime) {
-                    let progress = Math.min((simTimeHours - node.arrivalTime) / 24, 1);
-                    node.level = 1.2 + (node.maxLevel - 1.2) * progress * (node.rain / 300);
-                }
-
-                if (node.rain >= 80 && simTimeHours >= dynamicFloodTime) {
-                    node.status = 'Transbordo';
-                    node.color = '#e11d48';
-                } else if (simTimeHours >= node.arrivalTime && node.rain >= 50) {
-                    node.status = 'Alerta';
-                    node.color = '#f59e0b';
-                } else {
-                    node.status = 'Normal';
-                    node.color = '#10b981';
-                }
-            });
-
-            if (selectedNode) updateInfoPanel(selectedNode);
-
             if (Math.random() < 0.7) {
                 const conn = connections[Math.floor(Math.random() * connections.length)];
                 const fromNode = nodes.find(n => n.id === conn.from);
                 const toNode = nodes.find(n => n.id === conn.to);
-                if (simTimeHours >= fromNode.arrivalTime) {
-                    particles.push({
-                        x: fromNode.x, y: fromNode.y,
-                        targetX: toNode.x, targetY: toNode.y,
-                        progress: 0, speed: 0.007 + Math.random() * 0.004
-                    });
-                }
+                particles.push({
+                    x: fromNode.x, y: fromNode.y,
+                    targetX: toNode.x, targetY: toNode.y,
+                    progress: 0, speed: 0.007 + Math.random() * 0.004
+                });
             }
 
             particles.forEach(p => p.progress += p.speed);
@@ -509,7 +529,7 @@
 
                 ctx.fillStyle = '#94a3b8';
                 ctx.font = '10px monospace';
-                ctx.fillText(`${node.level.toFixed(2)}m`, x, y - 22);
+                ctx.fillText(node.status, x, y - 22);
             });
 
             ctx.restore();
@@ -527,6 +547,8 @@
             requestAnimationFrame(loop);
         }
 
+        calculateHydroDynamics();
+        updateActiveAlerts();
         requestAnimationFrame(loop);
     </script>
 </body>
