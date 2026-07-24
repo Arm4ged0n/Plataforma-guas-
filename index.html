@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plataforma Interativa - Fluxo de Águas RS</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#101a2e; --panel2:#0d1626; --line:#1e2c47;
+    --accent:#3aa0ff; --accent2:#ffb020; --danger:#ff4d4f; --ok:#2ecc71;
+    --text:#e6edf7; --muted:#8aa0c4;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    height:100vh; overflow:hidden;
+  }
+  .app{display:grid; grid-template-rows:auto auto 1fr; height:100vh;}
+
+  /* HEADER */
+  header{
+    padding:12px 18px; border-bottom:1px solid var(--line); display:flex;
+    justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+    background:var(--panel);
+  }
+  header h1{font-size:16px; font-weight:600;}
+  header .sub{font-size:11px; color:var(--muted); margin-top:2px;}
+  .clock{
+    font-family:'Courier New',monospace; font-size:13px; background:#000;
+    color:var(--accent2); padding:6px 12px; border-radius:6px; border:1px solid var(--line);
+    min-width:170px; text-align:center;
+  }
+
+  /* TABS */
+  nav.tabs{
+    display:flex; gap:4px; padding:8px 18px; background:var(--panel2);
+    border-bottom:1px solid var(--line);
+  }
+  nav.tabs button{
+    background:transparent; border:1px solid var(--line); color:var(--muted);
+    padding:8px 16px; border-radius:6px 6px 0 0; font-size:12px; font-weight:600;
+    cursor:pointer; transition:.15s;
+  }
+  nav.tabs button:hover{color:var(--text);}
+  nav.tabs button.active{background:var(--bg); color:var(--accent); border-bottom-color:var(--bg);}
+
+  /* MAIN LAYOUT */
+  main{display:grid; grid-template-columns:1fr 340px; overflow:hidden;}
+  .map-area{position:relative; overflow:hidden; background:radial-gradient(circle at 30% 20%, #0f1b30, #060a12 80%);}
+  #mapCanvas{display:block; cursor:grab; width:100%; height:100%;}
+  #mapCanvas.dragging{cursor:grabbing;}
+
+  .map-controls{
+    position:absolute; top:14px; right:14px; display:flex; flex-direction:column; gap:6px; z-index:5;
+  }
+  .map-controls button{
+    width:34px; height:34px; border-radius:6px; border:1px solid var(--line);
+    background:rgba(16,26,46,.9); color:var(--text); font-size:16px; cursor:pointer;
+  }
+  .map-controls button:hover{background:var(--panel);}
+
+  .map-hint{
+    position:absolute; bottom:12px; left:14px; font-size:11px; color:var(--muted);
+    background:rgba(16,26,46,.85); padding:6px 10px; border-radius:6px; border:1px solid var(--line);
+    max-width:320px; z-index:5;
+  }
+
+  .legend-float{
+    position:absolute; top:14px; left:14px; background:rgba(16,26,46,.9); border:1px solid var(--line);
+    border-radius:8px; padding:10px 12px; font-size:11px; z-index:5;
+  }
+  .legend-float div{display:flex; align-items:center; gap:6px; margin-bottom:4px;}
+  .legend-float span.dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
+
+  /* SIDE PANEL */
+  aside{
+    background:var(--panel); border-left:1px solid var(--line); overflow-y:auto;
+    padding:16px; display:flex; flex-direction:column; gap:16px;
+  }
+  .card{background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:14px;}
+  .card h3{font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--accent); margin-bottom:10px;}
+  .card h4{font-size:14px; margin-bottom:6px;}
+  .card p{font-size:12px; color:var(--muted); line-height:1.6;}
+
+  .node-title{font-size:16px; font-weight:700; margin-bottom:2px;}
+  .node-sub{font-size:11px; color:var(--muted); margin-bottom:10px;}
+
+  .stat-row{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
+  .stat-row .label{font-size:11px; color:var(--muted);}
+  .stat-row .val{font-size:15px; font-weight:700;}
+  .badge{display:inline-block; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:.3px;}
+  .b-ok{background:rgba(46,204,113,.15); color:var(--ok);}
+  .b-warn{background:rgba(255,176,32,.15); color:var(--accent2);}
+  .b-danger{background:rgba(255,77,79,.15); color:var(--danger);}
+
+  .bar{height:8px; border-radius:4px; background:#1c2740; overflow:hidden; margin:6px 0 2px;}
+  .bar-fill{height:100%; border-radius:4px; transition:width .25s;}
+
+  canvas.spark{width:100%; height:60px; background:#0a1120; border-radius:6px; border:1px solid var(--line);}
+
+  label.field{display:block; font-size:11px; color:var(--muted); margin-bottom:4px; margin-top:10px;}
+  input[type=range]{width:100%; accent-color:var(--accent);}
+  input[type=number]{
+    width:100%; background:#0a1120; border:1px solid var(--line); color:var(--text);
+    padding:6px 8px; border-radius:6px; font-size:12px;
+  }
+
+  .btn{
+    width:100%; padding:9px; border-radius:6px; border:none; font-size:12px; font-weight:700;
+    cursor:pointer; margin-top:8px; transition:.15s;
+  }
+  .btn-primary{background:var(--accent); color:#001527;}
+  .btn-primary:hover{background:#5cb2ff;}
+  .btn-outline{background:transparent; border:1px solid var(--line); color:var(--text);}
+  .btn-outline:hover{border-color:var(--accent); color:var(--accent);}
+  .btn-danger{background:transparent; border:1px solid var(--danger); color:var(--danger);}
+  .btn-danger:hover{background:rgba(255,77,79,.1);}
+
+  .rain-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .rain-item{background:#0a1120; border:1px solid var(--line); border-radius:6px; padding:8px;}
+  .rain-item .name{font-size:10px; color:var(--muted); margin-bottom:4px;}
+  .rain-item .value{font-size:13px; font-weight:700; color:var(--accent2);}
+
+  .timeline-wrap{display:flex; flex-direction:column; gap:8px;}
+  .timeline-date{font-size:14px; font-weight:700; color:var(--accent2); text-align:center;}
+  .tl-controls{display:flex; gap:6px; align-items:center;}
+  .tl-controls button{
+    background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:6px;
+    width:34px; height:34px; cursor:pointer; font-size:14px;
+  }
+
+  .log{
+    font-family:'Courier New',monospace; font-size:10.5px; max-height:160px; overflow-y:auto;
+    background:#050a14; border-radius:6px; padding:8px; border:1px solid var(--line);
+  }
+  .log div{color:var(--muted); margin-bottom:3px;}
+  .log div.alert{color:var(--accent2);}
+  .log div.critical{color:var(--danger); font-weight:700;}
+
+  .hidden{display:none !important;}
+
+  .empty-state{text-align:center; color:var(--muted); font-size:12px; padding:30px 10px;}
+  .empty-state .icon{font-size:30px; margin-bottom:10px;}
+
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div>
+      <h1>🌊 Plataforma Interativa — Fluxo de Águas do Rio Grande do Sul</h1>
+      <div class="sub">Simulação hidrológica em cascata • Mapa clicável • Linha do tempo do evento de 2024</div>
+    </div>
+    <div class="clock" id="clockDisplay">Dia 0 · 00h · pausado</div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="sim">▶ Simulador em Cascata</button>
+    <button class="tab-btn" data-tab="hist">🕒 Linha do Tempo 2024</button>
+    <button class="tab-btn" data-tab="explore">🔍 Explorar Nó</button>
+  </nav>
+
+  <main>
+    <div class="map-area">
+      <canvas id="mapCanvas"></canvas>
+
+      <div class="legend-float">
+        <div><span class="dot" style="background:#2ecc71"></span> Normal (&lt;60%)</div>
+        <div><span class="dot" style="background:#ffb020"></span> Alerta (60–100%)</div>
+        <div><span class="dot" style="background:#ff4d4f"></span> Crítico (&gt;100%)</div>
+        <div><span class="dot" style="background:#3aa0ff"></span> Partícula de água em trânsito</div>
+      </div>
+
+      <div class="map-controls">
+        <button id="zoomIn">+</button>
+        <button id="zoomOut">−</button>
+        <button id="zoomReset">⟲</button>
+      </div>
+
+      <div class="map-hint">Clique em um nó para inspecionar. Arraste para mover o mapa. Scroll para zoom.</div>
+    </div>
+
+    <aside id="sidePanel">
+      <!-- conteúdo injetado via JS conforme aba ativa -->
+    </aside>
+  </main>
+</div>
+
+<script>
+/* =========================================================
+   MODELO DE DADOS
+   Cada nó representa um trecho da bacia hidrográfica.
+   Posições são esquemáticas (não são coordenadas GPS reais),
+   organizadas para refletir o fluxo Norte→Sul descrito nos
+   relatos do evento de abril/maio de 2024.
+========================================================= */
+
+const NODES = {
+  serra: {
+    id:'serra', name:'Serra / Noroeste', sub:'Cotiporã, Bento Gonçalves, Muçum',
+    x:0.16, y:0.10, type:'cabeceira', cota:1.2, max:3.0, vazao:80,
+    isSource:true, rain:0,
+    desc:'Cabeceiras de relevo acidentado. Chuvas intensas aqui geram deslizamentos e enxurradas que descem rapidamente para os vales — foi nessa região que ocorreu o rompimento parcial da Barragem 14 de Julho em 2024.',
+    hist2024:{peak:3.0, peakDay:2, label:'Enxurradas e deslizamentos (30/abr–01/mai)'}
+  },
+  taquari: {
+    id:'taquari', name:'Rio Taquari', sub:'Lajeado, Estrela, Muçum',
+    x:0.30, y:0.24, type:'rio', cota:1.85, max:5.0, vazao:250,
+    isSource:false, rain:0,
+    desc:'Um dos primeiros rios a colapsar em 2024. Subiu dezenas de metros acima do normal em poucas horas, submergindo andares inteiros de construções em Lajeado e Estrela.',
+    hist2024:{peak:5.0, peakDay:3, label:'Pico histórico em 01/mai/2024'}
+  },
+  jacui: {
+    id:'jacui', name:'Rio Jacuí', sub:'Depressão Central',
+    x:0.44, y:0.36, type:'rio', cota:1.65, max:4.5, vazao:180,
+    isSource:true, rain:0,
+    desc:'Drena grande parte do centro e oeste do estado. Funciona como a principal artéria de escoamento para a região metropolitana, recebendo volumes vindos da Depressão Central.',
+    hist2024:{peak:4.5, peakDay:4, label:'Alagamento de municípios ribeirinhos (02/mai)'}
+  },
+  sinos: {
+    id:'sinos', name:'Rio dos Sinos', sub:'São Leopoldo, Novo Hamburgo, Canoas',
+    x:0.58, y:0.40, type:'rio', cota:1.2, max:4.0, vazao:120,
+    isSource:true, rain:0,
+    desc:'Deságua na Região Metropolitana. Provocou inundações históricas em Canoas, onde bairros inteiros ficaram debaixo d\'água, desalojando dezenas de milhares de pessoas.',
+    hist2024:{peak:4.0, peakDay:4, label:'Canoas submersa (03–05/mai)'}
+  },
+  guaiba: {
+    id:'guaiba', name:'Lago Guaíba', sub:'Porto Alegre',
+    x:0.50, y:0.53, type:'lago', cota:2.5, max:4.77, vazao:420,
+    isSource:false, rain:0,
+    desc:'Funil que recebe toda a água dos rios Taquari, Jacuí, Sinos e Gravataí. Em 03/mai/2024 atingiu 4,77m, superando o recorde histórico de 1941 (4,76m). Sistema de comportas (Casa da Mauá) foi parcialmente inundado.',
+    hist2024:{peak:4.77, peakDay:5, label:'RECORDE HISTÓRICO — 4,77m em 03/mai/2024'}
+  },
+  lagoa: {
+    id:'lagoa', name:'Lagoa dos Patos', sub:'Pelotas, Rio Grande, São José do Norte',
+    x:0.54, y:0.72, type:'lagoa', cota:0.95, max:2.5, vazao:420,
+    isSource:false, rain:0,
+    desc:'Gigantesco estuário que recebe o volume represado na região metropolitana com semanas de atraso. Em 2024 encheu a níveis jamais registrados, atingindo cidades litorâneas que não esperavam ser atingidas.',
+    hist2024:{peak:2.5, peakDay:14, label:'Canal São Gonçalo (Pelotas) atinge 3m — meados de maio'}
+  },
+  oceano: {
+    id:'oceano', name:'Barra / Oceano Atlântico', sub:'Rio Grande – Cassino',
+    x:0.52, y:0.90, type:'oceano', cota:0.4, max:1.2, vazao:420,
+    isSource:false, rain:0,
+    desc:'Ponto de escoamento final. Ventos e marés meteorológicas desfavoráveis reduzem a capacidade do oceano de "engolir" a vazão, criando um gargalo hidráulico que mantém a Lagoa dos Patos elevada por semanas.',
+    hist2024:{peak:1.2, peakDay:16, label:'Gargalo de escoamento prolongado'}
+  }
+};
+
+// Arestas: de -> para, tempo de viagem em horas (escala didática), e influência (quanto da cota extra é repassada)
+const EDGES = [
+  {from:'serra',   to:'taquari', hours:5,  factor:0.9},
+  {from:'taquari', to:'guaiba',  hours:14, factor:0.55},
+  {from:'jacui',   to:'guaiba',  hours:9,  factor:0.5},
+  {from:'sinos',   to:'guaiba',  hours:7,  factor:0.45},
+  {from:'guaiba',  to:'lagoa',   hours:60, factor:0.4},
+  {from:'lagoa',   to:'oceano',  hours:48, factor:0.5},
+];
+
+const NODE_BASE = {}; // guarda cota inicial para reset
+Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
+
+/* =========================================================
+   DADOS HISTÓRICOS ILUSTRATIVOS — abril/maio 2024
+   Modelo educativo construído a partir dos relatos públicos
+   do evento (não é série oficial minuto a minuto). O ponto
+   âncora real é o recorde do Guaíba: 4,77m em 03/mai/2024.
+========================================================= */
+const HIST_DAYS = 24; // dia 0 = 27/abr, dia 23 = 20/mai (aprox.)
+function histCota(nodeId, day){
+  const n = NODES[nodeId];
+  const peakDay = n.hist2024.peakDay;
+  const peak = n.hist2024.peak;
+  const base = NODE_BASE[nodeId];
+  if(day <= peakDay){
+    const t = day/peakDay;
+    return base + (peak-base) * Math.pow(t, 1.6);
+  } else {
+    const t = (day-peakDay)/(HIST_DAYS-peakDay);
+    const decayTarget = base + (peak-base)*0.25; // não volta totalmente ao normal na janela
+    return peak - (peak-decayTarget) * Math.pow(t, 0.8);
+  }
+}
+function histDateLabel(day){
+  const start = new Date(2024,3,27); // 27 abr 2024
+  const d = new Date(start.getTime() + day*86400000);
+  return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
+}
+
+/* =========================================================
+   CANVAS / MAPA
+========================================================= */
+const canvas = document.getElementById('mapCanvas');
+const ctx = canvas.getContext('2d');
+let view = {scale:1, offX:0, offY:0};
+let dragging=false, dragStart={x:0,y:0}, dragOff0={x:0,y:0};
+let selectedNode = null;
+let hoverNode = null;
+
+function resizeCanvas(){
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  canvas.style.width = rect.width+'px';
+  canvas.style.height = rect.height+'px';
+  drawMap();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function toScreen(nx, ny){
+  const w = canvas.width, h = canvas.height;
+  const pad = 0.12;
+  const px = (pad + nx*(1-2*pad)) * w;
+  const py = (pad + ny*(1-2*pad)) * h;
+  return {
+    x: px*view.scale + view.offX,
+    y: py*view.scale + view.offY
+  };
+}
+
+function nodeColor(n){
+  const pct = n.cota/n.max;
+  if(pct>=1) return '#ff4d4f';
+  if(pct>=0.6) return '#ffb020';
+  return '#2ecc71';
+}
+
+function drawMap(){
+  const w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  // fundo estilo "terreno"
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'#0f1b30');
+  grad.addColorStop(1,'#060a12');
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,w,h);
+
+  // arestas (rios)
+  EDGES.forEach(e=>{
+    const a = toScreen(NODES[e.from].x, NODES[e.from].y);
+    const b = toScreen(NODES[e.to].x, NODES[e.to].y);
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 + 30*view.scale;
+
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y);
+    ctx.quadraticCurveTo(mx,my,b.x,b.y);
+    ctx.strokeStyle = 'rgba(58,160,255,0.35)';
+    ctx.lineWidth = Math.max(2, 5*view.scale);
+    ctx.stroke();
+
+    // seta de direção no meio
+    const t=0.5;
+    const px = (1-t)*(1-t)*a.x + 2*(1-t)*t*mx + t*t*b.x;
+    const py = (1-t)*(1-t)*a.y + 2*(1-t)*t*my + t*t*b.y;
+    const dx = 2*(1-t)*(mx-a.x) + 2*t*(b.x-mx);
+    const dy = 2*(1-t)*(my-a.y) + 2*t*(b.y-my);
+    const ang = Math.atan2(dy,dx);
+    ctx.save();
+    ctx.translate(px,py);
+    ctx.rotate(ang);
+    ctx.fillStyle='rgba(58,160,255,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(6*view.scale,0);
+    ctx.lineTo(-4*view.scale,-4*view.scale);
+    ctx.lineTo(-4*view.scale,4*view.scale);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // partículas em trânsito
+  particles.forEach(p=>{
+    const edge = EDGES[p.edgeIdx];
+    const a = toScreen(NODES[edge.from].x, NODES[edge.from].y);
+    const b = toScreen(NODES[edge.to].x, NODES[edge.to].y);
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 + 30*view.scale;
+    const t=p.progress;
+    const px = (1-t)*(1-t)*a.x + 2*(1-t)*t*mx + t*t*b.x;
+    const py = (1-t)*(1-t)*a.y + 2*(1-t)*t*my + t*t*b.y;
+    ctx.beginPath();
+    ctx.arc(px,py, Math.max(3,4*view.scale),0,Math.PI*2);
+    ctx.fillStyle='#3aa0ff';
+    ctx.shadowColor='#3aa0ff';
+    ctx.shadowBlur=8;
+    ctx.fill();
+    ctx.shadowBlur=0;
+  });
+
+  // nós
+  Object.values(NODES).forEach(n=>{
+    const p = toScreen(n.x,n.y);
+    const r = Math.max(14, 20*view.scale);
+    const col = nodeColor(n);
+    const isSel = selectedNode===n.id;
+    const isHov = hoverNode===n.id;
+
+    if(isSel || isHov){
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,r+8,0,Math.PI*2);
+      ctx.strokeStyle = isSel ? '#ffffff' : 'rgba(255,255,255,.4)';
+      ctx.lineWidth=2;
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    ctx.fillStyle=col;
+    ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.8)';
+    ctx.lineWidth=2;
+    ctx.stroke();
+
+    ctx.fillStyle='#fff';
+    ctx.font = `bold ${Math.max(9,10*view.scale)}px sans-serif`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(n.name.split(' ')[0].slice(0,8).toUpperCase(), p.x, p.y);
+
+    ctx.fillStyle='#e6edf7';
+    ctx.font = `${Math.max(9,10*view.scale)}px sans-serif`;
+    ctx.fillText(n.cota.toFixed(2)+'m', p.x, p.y+r+14);
+  });
+
+  // rótulo N/S
+  ctx.fillStyle='rgba(230,237,247,.4)';
+  ctx.font='11px sans-serif';
+  ctx.textAlign='left';
+  ctx.fillText('↑ Cabeceiras / Serra', 16, 24);
+  ctx.fillText('↓ Oceano Atlântico', 16, h-16);
+}
+
+function hitTest(mx,my){
+  let found=null;
+  Object.values(NODES).forEach(n=>{
+    const p = toScreen(n.x,n.y);
+    const r = Math.max(14,20*view.scale);
+    if(Math.hypot(mx-p.x,my-p.y) <= r+6) found=n.id;
+  });
+  return found;
+}
+
+canvas.addEventListener('mousedown', e=>{
+  const rect=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*devicePixelRatio, my=(e.clientY-rect.top)*devicePixelRatio;
+  const hit = hitTest(mx,my);
+  if(hit){
+    selectedNode = hit;
+    activeTab='explore';
+    setActiveTabUI('explore');
+    renderPanel();
+    drawMap();
+    return;
+  }
+  dragging=true;
+  canvas.classList.add('dragging');
+  dragStart={x:e.clientX,y:e.clientY};
+  dragOff0={x:view.offX,y:view.offY};
+});
+window.addEventListener('mousemove', e=>{
+  if(dragging){
+    view.offX = dragOff0.x + (e.clientX-dragStart.x)*devicePixelRatio;
+    view.offY = dragOff0.y + (e.clientY-dragStart.y)*devicePixelRatio;
+    drawMap();
+  } else {
+    const rect=canvas.getBoundingClientRect();
+    const mx=(e.clientX-rect.left)*devicePixelRatio, my=(e.clientY-rect.top)*devicePixelRatio;
+    const hit = hitTest(mx,my);
+    if(hit!==hoverNode){ hoverNode=hit; canvas.style.cursor = hit?'pointer':'grab'; drawMap(); }
+  }
+});
+window.addEventListener('mouseup', ()=>{ dragging=false; canvas.classList.remove('dragging'); });
+canvas.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const delta = e.deltaY<0 ? 1.1 : 0.9;
+  view.scale = Math.min(3, Math.max(0.5, view.scale*delta));
+  drawMap();
+}, {passive:false});
+
+document.getElementById('zoomIn').onclick=()=>{ view.scale=Math.min(3,view.scale*1.15); drawMap(); };
+document.getElementById('zoomOut').onclick=()=>{ view.scale=Math.max(0.5,view.scale*0.87); drawMap(); };
+document.getElementById('zoomReset').onclick=()=>{ view={scale:1,offX:0,offY:0}; drawMap(); };
+
+/* =========================================================
+   SIMULAÇÃO EM CASCATA
+========================================================= */
+let particles = []; // {edgeIdx, progress, volume}
+let simRunning=false;
+let simSpeed=6; // horas simuladas por segundo real
+let simClock=0; // horas
+let simInterval=null;
+let eventLog=[];
+const notified = {}; // controla alertas já logados por nó
+
+function logEvent(msg, level='info'){
+  const dia = Math.floor(simClock/24), hora = Math.floor(simClock%24);
+  eventLog.unshift({msg:`[D${dia} ${String(hora).padStart(2,'0')}h] ${msg}`, level});
+  if(eventLog.length>60) eventLog.pop();
+  if(activeTab==='sim') renderLog();
+}
+
+function startSim(){
+  if(simRunning) return;
+  simRunning=true;
+  logEvent('Simulação iniciada.', 'info');
+  simInterval = setInterval(tick, 100);
+  updateClockUI();
+}
+function pauseSim(){
+  simRunning=false;
+  clearInterval(simInterval);
+  updateClockUI();
+}
+function resetSim(){
+  pauseSim();
+  simClock=0;
+  particles=[];
+  eventLog=[];
+  Object.values(NODES).forEach(n=>{
+    n.cota = NODE_BASE[n.id];
+    n.rain = 0;
+    notified[n.id]=false;
+  });
+  updateClockUI();
+  drawMap();
+  if(activeTab==='sim'){ renderPanel(); }
+}
+
+function tick(){
+  const dt = simSpeed * (100/1000); // horas por tick de 100ms
+  simClock += dt;
+
+  // fontes com chuva ativa: sobe a cota local e gera partículas
+  Object.values(NODES).forEach(n=>{
+    if(n.isSource && n.rain>0){
+      n.cota = Math.min(n.max*1.15, n.cota + (n.rain/100)*0.06*dt);
+      n.spawnAcc = (n.spawnAcc||0) + dt;
+      const interval = Math.max(0.4, 2 - n.rain/60);
+      if(n.spawnAcc >= interval){
+        n.spawnAcc = 0;
+        EDGES.forEach((e, idx)=>{
+          if(e.from===n.id){
+            particles.push({edgeIdx:idx, progress:0, volume:n.rain/100});
+          }
+        });
+      }
+    }
+  });
+
+  // mover partículas
+  for(let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    const edge = EDGES[p.edgeIdx];
+    p.progress += dt/edge.hours;
+    if(p.progress>=1){
+      const target = NODES[edge.to];
+      const bump = p.volume * edge.factor * 0.9;
+      target.cota = Math.min(target.max*1.15, target.cota + bump);
+      particles.splice(i,1);
+
+      // dispara novas partículas a jusante se o nó também tiver saída (efeito cascata natural)
+      EDGES.forEach((e2, idx2)=>{
+        if(e2.from===target.id){
+          particles.push({edgeIdx:idx2, progress:0, volume:bump*0.6});
+        }
+      });
+    }
+  }
+
+  // leve decaimento natural (escoamento) quando não há chuva alimentando
+  Object.values(NODES).forEach(n=>{
+    const base = NODE_BASE[n.id];
+    if(n.cota>base){
+      n.cota -= (n.cota-base) * 0.002 * dt;
+    }
+    checkAlert(n);
+  });
+
+  drawMap();
+  updateClockUI();
+  if(activeTab==='sim') renderStatusList();
+  if(activeTab==='explore' && selectedNode) renderPanel();
+}
+
+function checkAlert(n){
+  const pct = n.cota/n.max;
+  const key = n.id;
+  if(pct>=1 && notified[key]!=='critical'){
+    notified[key]='critical';
+    logEvent(`⚠ ${n.name} ultrapassou a cota crítica (${n.cota.toFixed(2)}m).`, 'critical');
+  } else if(pct>=0.6 && pct<1 && notified[key]!=='alert' && notified[key]!=='critical'){
+    notified[key]='alert';
+    logEvent(`${n.name} entrou em nível de alerta (${n.cota.toFixed(2)}m).`, 'alert');
+  } else if(pct<0.6){
+    notified[key]=false;
+  }
+}
+
+function updateClockUI(){
+  const dia = Math.floor(simClock/24), hora = Math.floor(simClock%24);
+  document.getElementById('clockDisplay').textContent =
+    `Dia ${dia} · ${String(hora).padStart(2,'0')}h · ${simRunning?'rodando':'pausado'}`;
+}
+
+/* =========================================================
+   ABAS / PAINEL LATERAL
+========================================================= */
+let activeTab='sim';
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    activeTab = btn.dataset.tab;
+    setActiveTabUI(activeTab);
+    renderPanel();
+  });
+});
+function setActiveTabUI(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+}
+
+function renderPanel(){
+  const el = document.getElementById('sidePanel');
+  if(activeTab==='sim') return renderSimTab(el);
+  if(activeTab==='hist') return renderHistTab(el);
+  if(activeTab==='explore') return renderExploreTab(el);
+}
+
+/* ---------- ABA SIMULADOR ---------- */
+function renderSimTab(el){
+  const sources = Object.values(NODES).filter(n=>n.isSource);
+  el.innerHTML = `
+    <div class="card">
+      <h3>Controles da Simulação</h3>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-primary" id="btnPlay">${simRunning?'⏸ Pausar':'▶ Rodar'}</button>
+        <button class="btn btn-outline" id="btnReset">↻ Reset</button>
+      </div>
+      <label class="field">Velocidade (${simSpeed}h simuladas / seg)</label>
+      <input type="range" id="speedSlider" min="1" max="24" step="1" value="${simSpeed}">
+    </div>
+
+    <div class="card">
+      <h3>Chuva por Região (fontes)</h3>
+      <div class="rain-grid" id="rainGrid"></div>
+      <p style="margin-top:10px;">Ajuste a intensidade e clique em "Rodar". A água se propaga entre os nós respeitando o tempo de viagem de cada trecho — assista a cascata acontecer no mapa.</p>
+      <button class="btn btn-outline" id="btnPreset2024">⚡ Carregar cenário Maio/2024</button>
+    </div>
+
+    <div class="card">
+      <h3>Status Atual dos Nós</h3>
+      <div id="statusList"></div>
+    </div>
+
+    <div class="card">
+      <h3>Registro de Eventos</h3>
+      <div class="log" id="logBox"></div>
+    </div>
+  `;
+
+  const rainGrid = document.getElementById('rainGrid');
+  sources.forEach(n=>{
+    const div = document.createElement('div');
+    div.className='rain-item';
+    div.innerHTML = `
+      <div class="name">${n.name}</div>
+      <input type="range" min="0" max="100" value="${n.rain}" data-node="${n.id}" class="rainSlider">
+      <div class="value"><span class="rv-${n.id}">${n.rain}</span> mm/h</div>
+    `;
+    rainGrid.appendChild(div);
+  });
+  document.querySelectorAll('.rainSlider').forEach(s=>{
+    s.addEventListener('input', e=>{
+      const id = e.target.dataset.node;
+      NODES[id].rain = parseInt(e.target.value);
+      document.querySelector(`.rv-${id}`).textContent = e.target.value;
+    });
+  });
+
+  document.getElementById('btnPlay').onclick = ()=>{
+    simRunning ? pauseSim() : startSim();
+    renderSimTab(el);
+  };
+  document.getElementById('btnReset').onclick = resetSim;
+  document.getElementById('speedSlider').oninput = e=>{ simSpeed=parseInt(e.target.value); renderSimTab(el); };
+  document.getElementById('btnPreset2024').onclick = ()=>{
+    NODES.serra.rain=90; NODES.jacui.rain=70; NODES.sinos.rain=65;
+    logEvent('Cenário Maio/2024 carregado: chuva extrema em todas as regiões-fonte.', 'alert');
+    if(!simRunning) startSim();
+    renderSimTab(el);
+  };
+
+  renderStatusList();
+  renderLog();
+}
+
+function renderStatusList(){
+  const box = document.getElementById('statusList');
+  if(!box) return;
+  box.innerHTML = Object.values(NODES).map(n=>{
+    const pct = Math.min(100, (n.cota/n.max)*100);
+    const cls = pct>=100?'b-danger':pct>=60?'b-warn':'b-ok';
+    const barCol = pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71';
+    return `
+      <div class="stat-row">
+        <span class="label">${n.name}</span>
+        <span class="val">${n.cota.toFixed(2)}m</span>
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${barCol}"></div></div>
+    `;
+  }).join('');
+}
+
+function renderLog(){
+  const box = document.getElementById('logBox');
+  if(!box) return;
+  box.innerHTML = eventLog.length ? eventLog.map(l=>`<div class="${l.level}">${l.msg}</div>`).join('')
+    : '<div>Nenhum evento ainda. Ajuste a chuva e clique em Rodar.</div>';
+}
+
+/* ---------- ABA LINHA DO TEMPO ---------- */
+let tlDay = 0;
+let tlPlaying=false, tlInterval=null;
+
+function renderHistTab(el){
+  el.innerHTML = `
+    <div class="card">
+      <h3>Linha do Tempo — Abril/Maio 2024</h3>
+      <p style="margin-bottom:10px;">Modelo educativo construído a partir dos relatos públicos do evento. O ponto de referência real é o recorde do Guaíba: <strong>4,77m em 03/mai/2024</strong>, superando a marca de 1941 (4,76m). As demais curvas são estimativas ilustrativas do formato de subida/descida.</p>
+      <div class="timeline-wrap">
+        <div class="timeline-date" id="tlDate"></div>
+        <input type="range" id="tlSlider" min="0" max="${HIST_DAYS-1}" value="${tlDay}">
+        <div class="tl-controls">
+          <button id="tlPlay">${tlPlaying?'⏸':'▶'}</button>
+          <button id="tlBack">⏮</button>
+          <button id="tlFwd">⏭</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Situação em ${histDateLabel(tlDay)}</h3>
+      <div id="tlStatusList"></div>
+    </div>
+
+    <div class="card">
+      <h3>Destaque do Dia</h3>
+      <p id="tlHighlight"></p>
+    </div>
+  `;
+
+  applyTimelineDay(tlDay);
+
+  document.getElementById('tlSlider').oninput = e=>{
+    tlDay = parseInt(e.target.value);
+    applyTimelineDay(tlDay);
+  };
+  document.getElementById('tlBack').onclick = ()=>{ tlDay=Math.max(0,tlDay-1); document.getElementById('tlSlider').value=tlDay; applyTimelineDay(tlDay); };
+  document.getElementById('tlFwd').onclick = ()=>{ tlDay=Math.min(HIST_DAYS-1,tlDay+1); document.getElementById('tlSlider').value=tlDay; applyTimelineDay(tlDay); };
+  document.getElementById('tlPlay').onclick = ()=>{
+    tlPlaying = !tlPlaying;
+    document.getElementById('tlPlay').textContent = tlPlaying?'⏸':'▶';
+    if(tlPlaying){
+      tlInterval = setInterval(()=>{
+        tlDay++;
+        if(tlDay>=HIST_DAYS){ tlDay=0; }
+        document.getElementById('tlSlider').value=tlDay;
+        applyTimelineDay(tlDay);
+      }, 500);
+    } else {
+      clearInterval(tlInterval);
+    }
+  };
+}
+
+function applyTimelineDay(day){
+  Object.values(NODES).forEach(n=>{ n.cota = histCota(n.id, day); });
+  drawMap();
+  const dateEl = document.getElementById('tlDate');
+  if(dateEl) dateEl.textContent = histDateLabel(day) + ' de 2024';
+  const listEl = document.getElementById('tlStatusList');
+  if(listEl){
+    listEl.innerHTML = Object.values(NODES).map(n=>{
+      const pct = Math.min(100,(n.cota/n.max)*100);
+      const barCol = pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71';
+      return `
+        <div class="stat-row">
+          <span class="label">${n.name}</span>
+          <span class="val">${n.cota.toFixed(2)}m</span>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${barCol}"></div></div>
+      `;
+    }).join('');
+  }
+  // destaque: nó mais próximo do pico nesse dia
+  let closest=null, closestDist=Infinity;
+  Object.values(NODES).forEach(n=>{
+    const d = Math.abs(day - n.hist2024.peakDay);
+    if(d<closestDist){ closestDist=d; closest=n; }
+  });
+  const hEl = document.getElementById('tlHighlight');
+  if(hEl && closest) hEl.textContent = `${closest.name}: ${closest.hist2024.label}`;
+}
+
+/* ---------- ABA EXPLORAR NÓ ---------- */
+function renderExploreTab(el){
+  if(!selectedNode){
+    el.innerHTML = `
+      <div class="card">
+        <div class="empty-state">
+          <div class="icon">🖱️</div>
+          Clique em um ponto do mapa para ver detalhes, histórico e configurar a chuva local deste trecho.
+        </div>
+      </div>
+    `;
+    return;
+  }
+  const n = NODES[selectedNode];
+  const pct = Math.min(100,(n.cota/n.max)*100);
+  const status = pct>=100?['CRÍTICO','b-danger']:pct>=60?['ALERTA','b-warn']:['NORMAL','b-ok'];
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="node-title">${n.name}</div>
+      <div class="node-sub">${n.sub}</div>
+      <span class="badge ${status[1]}">${status[0]}</span>
+
+      <div style="margin-top:12px;">
+        <div class="stat-row"><span class="label">Cota atual</span><span class="val">${n.cota.toFixed(2)} m</span></div>
+        <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71'}"></div></div>
+        <div class="stat-row" style="margin-top:8px;"><span class="label">Cota crítica de referência</span><span class="val">${n.max.toFixed(2)} m</span></div>
+        <div class="stat-row"><span class="label">Vazão estimada</span><span class="val">${n.vazao} m³/s</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Sobre este ponto</h3>
+      <p>${n.desc}</p>
+    </div>
+
+    <div class="card">
+      <h3>Registro histórico — 2024</h3>
+      <p><strong>${n.hist2024.label}</strong></p>
+      <canvas class="spark" id="sparkCanvas"></canvas>
+    </div>
+
+    ${n.isSource ? `
+    <div class="card">
+      <h3>Chuva local neste trecho</h3>
+      <label class="field">Intensidade (mm/h)</label>
+      <input type="range" id="localRain" min="0" max="100" value="${n.rain}">
+      <div class="stat-row"><span class="label">Atual</span><span class="val" id="localRainVal">${n.rain} mm/h</span></div>
+      <button class="btn btn-primary" id="btnStartLocalSim">${simRunning?'Simulação já rodando':'▶ Iniciar simulação com esta chuva'}</button>
+    </div>` : ''}
+
+    <button class="btn btn-outline" id="btnCloseNode">← Voltar</button>
+  `;
+
+  drawSparkline(n);
+
+  if(n.isSource){
+    document.getElementById('localRain').oninput = e=>{
+      n.rain = parseInt(e.target.value);
+      document.getElementById('localRainVal').textContent = n.rain+' mm/h';
+    };
+    document.getElementById('btnStartLocalSim').onclick = ()=>{
+      if(!simRunning) startSim();
+    };
+  }
+  document.getElementById('btnCloseNode').onclick = ()=>{
+    selectedNode=null;
+    renderExploreTab(el);
+    drawMap();
+  };
+}
+
+function drawSparkline(n){
+  const c = document.getElementById('sparkCanvas');
+  if(!c) return;
+  c.width = c.clientWidth*devicePixelRatio;
+  c.height = c.clientHeight*devicePixelRatio;
+  const sctx = c.getContext('2d');
+  const pts = [];
+  for(let d=0; d<HIST_DAYS; d++) pts.push(histCota(n.id,d));
+  const max = Math.max(...pts)*1.1, min = Math.min(...pts)*0.9;
+  sctx.clearRect(0,0,c.width,c.height);
+  sctx.beginPath();
+  pts.forEach((v,i)=>{
+    const x = (i/(pts.length-1))*c.width;
+    const y = c.height - ((v-min)/(max-min))*c.height;
+    i===0?sctx.moveTo(x,y):sctx.lineTo(x,y);
+  });
+  sctx.strokeStyle='#3aa0ff';
+  sctx.lineWidth=2*devicePixelRatio;
+  sctx.stroke();
+  // linha do pico
+  const peakIdx = n.hist2024.peakDay;
+  const px = (peakIdx/(pts.length-1))*c.width;
+  sctx.strokeStyle='rgba(255,77,79,.6)';
+  sctx.setLineDash([4,4]);
+  sctx.beginPath();
+  sctx.moveTo(px,0); sctx.lineTo(px,c.height);
+  sctx.stroke();
+  sctx.setLineDash([]);
+}
+
+/* =========================================================
+   INIT
+========================================================= */
+resizeCanvas();
+renderPanel();
+updateClockUI();
+</script>
+</body>
+</html>
