@@ -81,25 +81,25 @@
                     <div>
                         <div class="flex justify-between text-[11px] text-slate-300 mb-1">
                             <span>Serra / Noroeste (Cabeceiras)</span>
-                            <span id="val-serra" class="font-mono text-blue-400">50 mm</span>
+                            <span id="val-serra" class="font-mono text-blue-400">0 mm</span>
                         </div>
-                        <input type="range" id="range-serra" min="0" max="800" step="10" value="50" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('serra', this.value)">
+                        <input type="range" id="range-serra" min="0" max="800" step="10" value="0" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('serra', this.value)">
                     </div>
 
                     <div>
                         <div class="flex justify-between text-[11px] text-slate-300 mb-1">
                             <span>Rio Jacuí & Centro</span>
-                            <span id="val-jacui" class="font-mono text-blue-400">30 mm</span>
+                            <span id="val-jacui" class="font-mono text-blue-400">0 mm</span>
                         </div>
-                        <input type="range" id="range-jacui" min="0" max="700" step="10" value="30" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('jacui', this.value)">
+                        <input type="range" id="range-jacui" min="0" max="700" step="10" value="0" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('jacui', this.value)">
                     </div>
 
                     <div>
                         <div class="flex justify-between text-[11px] text-slate-300 mb-1">
                             <span>Região Metropolitana</span>
-                            <span id="val-metrop" class="font-mono text-blue-400">40 mm</span>
+                            <span id="val-metrop" class="font-mono text-blue-400">0 mm</span>
                         </div>
-                        <input type="range" id="range-metrop" min="0" max="700" step="10" value="40" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('metrop', this.value)">
+                        <input type="range" id="range-metrop" min="0" max="700" step="10" value="0" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('metrop', this.value)">
                     </div>
                 </div>
             </div>
@@ -140,20 +140,20 @@
                 <!-- Painel Detalhado do Nó Selecionado com Rotas de Evacuação e Infraestrutura -->
                 <div class="bg-slate-950 border-t border-slate-800 p-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                     <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Cidades Afetadas</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Cidades na Região</span>
                         <span id="info-node-cities" class="font-bold text-white text-xs">Clique num nó do mapa</span>
                     </div>
                     <div>
                         <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Infraestruturas Críticas</span>
-                        <span id="info-node-infra" class="text-amber-300 font-medium text-xs">--</span>
+                        <span id="info-node-infra" class="text-emerald-300 font-medium text-xs">Normal</span>
                     </div>
                     <div>
                         <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Rotas de Fuga / Abrigos</span>
-                        <span id="info-node-escape" class="text-cyan-300 font-medium text-xs">--</span>
+                        <span id="info-node-escape" class="text-cyan-300 font-medium text-xs">Disponíveis</span>
                     </div>
                     <div>
                         <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Tempo até Inundação</span>
-                        <span id="info-node-flood" class="font-mono text-rose-400 font-bold text-sm">-- h</span>
+                        <span id="info-node-flood" class="font-mono text-emerald-400 font-bold text-sm">Sem Risco</span>
                     </div>
                 </div>
 
@@ -164,27 +164,27 @@
                 <div>
                     <h4 class="font-bold text-white text-xs mb-2 flex items-center justify-between">
                         <span class="flex items-center gap-2"><i class="fa-solid fa-chart-line text-blue-400"></i> Curva de Nível Prevista</span>
-                        <span id="chart-peak-val" class="text-blue-400 font-mono font-bold">-- m</span>
+                        <span id="chart-peak-val" class="text-blue-400 font-mono font-bold">0.00 m</span>
                     </h4>
                     <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-end justify-between h-32 gap-3 pt-6">
                         <div class="flex flex-col items-center flex-1 h-full justify-end">
-                            <span id="val-bar1" class="text-[9px] text-slate-300 mb-1 font-mono">--</span>
-                            <div id="bar-h1" class="w-full bg-blue-600 rounded-t transition-all duration-300 min-h-[10px]" style="height: 30%"></div>
+                            <span id="val-bar1" class="text-[9px] text-slate-300 mb-1 font-mono">0.00m</span>
+                            <div id="bar-h1" class="w-full bg-blue-600 rounded-t transition-all duration-300 min-h-[10px]" style="height: 10%"></div>
                             <span class="text-[9px] text-slate-400 mt-1">12h</span>
                         </div>
                         <div class="flex flex-col items-center flex-1 h-full justify-end">
-                            <span id="val-bar2" class="text-[9px] text-slate-300 mb-1 font-mono">--</span>
-                            <div id="bar-h2" class="w-full bg-blue-500 rounded-t transition-all duration-300 min-h-[10px]" style="height: 50%"></div>
+                            <span id="val-bar2" class="text-[9px] text-slate-300 mb-1 font-mono">0.00m</span>
+                            <div id="bar-h2" class="w-full bg-blue-500 rounded-t transition-all duration-300 min-h-[10px]" style="height: 10%"></div>
                             <span class="text-[9px] text-slate-400 mt-1">24h</span>
                         </div>
                         <div class="flex flex-col items-center flex-1 h-full justify-end">
-                            <span id="val-bar3" class="text-[9px] text-slate-300 mb-1 font-mono">--</span>
-                            <div id="bar-h3" class="w-full bg-indigo-500 rounded-t transition-all duration-300 min-h-[10px]" style="height: 70%"></div>
+                            <span id="val-bar3" class="text-[9px] text-slate-300 mb-1 font-mono">0.00m</span>
+                            <div id="bar-h3" class="w-full bg-indigo-500 rounded-t transition-all duration-300 min-h-[10px]" style="height: 10%"></div>
                             <span class="text-[9px] text-slate-400 mt-1">36h</span>
                         </div>
                         <div class="flex flex-col items-center flex-1 h-full justify-end">
-                            <span id="val-bar4" class="text-[9px] text-slate-300 mb-1 font-mono">--</span>
-                            <div id="bar-h4" class="w-full bg-rose-600 rounded-t transition-all duration-300 min-h-[10px]" style="height: 90%"></div>
+                            <span id="val-bar4" class="text-[9px] text-slate-300 mb-1 font-mono">0.00m</span>
+                            <div id="bar-h4" class="w-full bg-emerald-500 rounded-t transition-all duration-300 min-h-[10px]" style="height: 10%"></div>
                             <span class="text-[9px] text-slate-400 mt-1">48h (Pico)</span>
                         </div>
                     </div>
@@ -195,7 +195,7 @@
                             <i class="fa-solid fa-shield-halved text-emerald-400"></i> Ação Recomendada da Proteção Civil
                         </h4>
                         <p id="info-node-action" class="text-slate-300 text-xs leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800">
-                            Selecione um ponto no mapa para ver as orientações de segurança detalhadas para a região.
+                            Sem risco iminente de cheia com os níveis atuais de precipitação. Região segura.
                         </p>
                     </div>
                     <div class="text-[10px] text-slate-400 italic text-right">
@@ -212,7 +212,7 @@
         <p>Plataforma Hidrográfica Avançada com Histórico, Infraestruturas, Rotas de Evacuação e Curvas de Cota (RS 2026).</p>
     </footer>
 
-    <!-- Script de Simulação Avançada -->
+    <!-- Script com Correção Estrita de Chuva Zero -->
     <script>
         const canvas = document.getElementById('hydroCanvas');
         const ctx = canvas.getContext('2d');
@@ -228,85 +228,91 @@
                 id: 'noroeste', 
                 name: 'Rio Uruguai / Noroeste', 
                 cities: 'Uruguaiana, Itapiranga, Porto Vera Cruz',
-                infra: 'Ponte Internacional / BR-472',
-                escape: 'Rotas Norte (Áreas altas de Uruguaiana)',
+                infraNormal: 'Ponte Internacional / BR-472 (Normal)',
+                infraCrisis: 'Ponte Internacional / BR-472 (Bloqueada)',
+                escape: 'Rotas Norte (Áreas altas)',
                 x: 0.35, y: 0.15, 
-                baseArrival: 2, baseFlood: 24,
                 maxCota: 4.5,
                 rainRef: 'serra',
                 status: 'Normal', color: '#10b981',
-                action: 'Monitorização preventiva de encostas e pontes.',
-                desc: 'Cabeceiras no Noroeste. Risco de enxurradas rápidas.' 
+                actionNormal: 'Monitorização preventiva rotineira.',
+                actionCrisis: 'Monitore encostas e margens.',
+                desc: 'Cabeceiras no Noroeste.' 
             },
             { 
                 id: 'serra', 
                 name: 'Rio Taquari (Serra & Vales)', 
                 cities: 'Muçum, Roca Sales, Lajeado, Estrela',
-                infra: 'Pontes Históricas / BR-386 (Bloqueada)',
-                escape: 'Encaminhamento para os pavilhões municipais (Zonas Altas)',
+                infraNormal: 'Pontes Históricas / BR-386 (Fluindo)',
+                infraCrisis: 'Pontes Históricas / BR-386 (Submersa/Bloqueada)',
+                escape: 'Pavilhões municipais (Zonas Altas)',
                 x: 0.65, y: 0.22, 
-                baseArrival: 4, baseFlood: 14,
                 maxCota: 6.2,
                 rainRef: 'serra',
                 status: 'Normal', color: '#10b981',
-                action: '⚠️ EVACUAÇÃO IMEDIATA nas margens do Taquari!',
-                desc: 'Vales estreitos. Resposta muito rápida a volumes altos.' 
+                actionNormal: 'Nenhum alerta de cheia no momento.',
+                actionCrisis: '⚠️ EVACUAÇÃO IMEDIATA nas margens do Taquari!',
+                desc: 'Vales estreitos.' 
             },
             { 
                 id: 'jacui', 
                 name: 'Rio Jacuí (Centro do RS)', 
                 cities: 'Cachoeira do Sul, Santa Maria, Pantano Grande',
-                infra: 'BR-290 / Travessias fluviais',
-                escape: 'Abrigos em escolas municipais de Cachoeira',
+                infraNormal: 'BR-290 (Aberta)',
+                infraCrisis: 'BR-290 / Travessias (Interditadas)',
+                escape: 'Abrigos em escolas municipais',
                 x: 0.45, y: 0.40, 
-                baseArrival: 8, baseFlood: 22,
                 maxCota: 5.8,
                 rainRef: 'jacui',
                 status: 'Normal', color: '#10b981',
-                action: 'Alerta de interdição preventiva de pontes secundárias.',
-                desc: 'Coletor central que drena volumes do interior.' 
+                actionNormal: 'Fluxo regular no rio.',
+                actionCrisis: 'Alerta de interdição de pontes e estradas.',
+                desc: 'Coletor central.' 
             },
             { 
                 id: 'metrop', 
                 name: 'Lago Guaíba (Porto Alegre / Sinos)', 
                 cities: 'Porto Alegre, Canoas, São Leopoldo, Novo Hamburgo',
-                infra: 'Muro da Mauá, Aeroporto Salgado Filho, Trensurb',
-                escape: 'BR-116 Norte / Ginásios de Esportes designados',
+                infraNormal: 'Muro da Mauá / Aeroporto Operacionais',
+                infraCrisis: 'Muro da Mauá ultrapassado / Aeroporto Salgado Filho em risco',
+                escape: 'BR-116 Norte / Ginásios designados',
                 x: 0.55, y: 0.60, 
-                baseArrival: 14, baseFlood: 30,
                 maxCota: 4.77,
                 rainRef: 'metrop',
                 status: 'Normal', color: '#10b981',
-                action: '🚨 Fechamento total de comportas e alerta metropolitano!',
-                desc: 'Reúne os principais rios e atinge cotas críticas.' 
+                actionNormal: 'Sistema de proteção contra cheias inativo (sem necessidade).',
+                actionCrisis: '🚨 Fechamento total de comportas e alerta metropolitano!',
+                desc: 'Funil metropolitano.' 
             },
             { 
                 id: 'lagoon', 
                 name: 'Lagoa dos Patos (Zona Sul)', 
                 cities: 'Pelotas, São Lourenço do Sul, Tapes',
-                infra: 'Canal São Gonçalo / Vias costuras',
-                escape: 'Zonas altas de Pelotas / Pavilhões FENAC',
+                infraNormal: 'Canal São Gonçalo (Normal)',
+                infraCrisis: 'Canal São Gonçalo transbordando nas margens',
+                escape: 'Zonas altas de Pelotas',
                 x: 0.48, y: 0.80, 
-                baseArrival: 36, baseFlood: 72,
                 maxCota: 3.2,
                 rainRef: 'serra',
                 status: 'Normal', color: '#10b981',
-                action: 'Preparar abrigos costeiros e barreiras móveis no Canal São Gonçalo.',
-                desc: 'Onda de cheia migrando para o sul do estado.' 
+                actionNormal: 'Níveis estáveis na lagoa.',
+                actionCrisis: 'Preparar abrigos costeiros e barreiras móveis.',
+                desc: 'Zona estuarina sul.' 
             },
             { 
                 id: 'ocean', 
                 name: 'Oceano Atlântico (Barra de Rio Grande)', 
                 cities: 'Rio Grande, Cassino, São José do Norte',
-                infra: 'Porto de Rio Grande / Travessia de Balsa',
+                infraNormal: 'Porto de Rio Grande (Operacional)',
+                infraCrisis: 'Escoamento estrangulado na barra',
                 escape: 'Áreas elevadas da Zona Leste',
                 x: 0.52, y: 0.95, 
-                baseArrival: 50, baseFlood: 100,
                 maxCota: 1.5,
                 rainRef: 'serra',
                 status: 'Normal', color: '#10b981',
-                action: 'Monitorização da barra e suporte a embarcações.',
-                desc: 'Gargalo no estuário com represamento da bacia.' 
+                actionNormal: 'Maré em condições normais.',
+                actionCrisis: 'Monitorização do represamento no estuário.',
+                desc: 'Estuário final.' 
             }
         ];
 
@@ -319,9 +325,9 @@
         ];
 
         let rainValues = {
-            serra: 50,
-            jacui: 30,
-            metrop: 40
+            serra: 0,
+            jacui: 0,
+            metrop: 0
         };
 
         let particles = [];
@@ -422,7 +428,9 @@
                 rainValues.jacui = 80;
                 rainValues.metrop = 90;
             } else {
-                return;
+                rainValues.serra = 0;
+                rainValues.jacui = 0;
+                rainValues.metrop = 0;
             }
 
             document.getElementById('range-serra').value = rainValues.serra;
@@ -441,27 +449,26 @@
         function calculateHydroDynamics() {
             nodes.forEach(node => {
                 let currentRain = rainValues[node.rainRef];
-                let rainFactor = Math.max(currentRain / 80, 0.1);
                 
-                node.calculatedArrivalTime = Math.max(0.5, (node.baseArrival / rainFactor)).toFixed(1);
-                
-                if (currentRain < 70) {
+                // Validação estrita: se a chuva for menor que 80mm, o status é obrigatoriamente NORMAL e SEM RISCO
+                if (currentRain < 80) {
                     node.calculatedFloodTime = 'Sem risco';
                     node.status = 'Normal';
                     node.color = '#10b981';
+                    node.action = node.actionNormal;
+                    node.infraStatus = node.infraNormal;
                 } else {
-                    let floodHours = Math.max(1, (node.baseFlood / (currentRain / 70)));
+                    let floodHours = Math.max(1, (14 / (currentRain / 100)));
                     node.calculatedFloodTime = `${floodHours.toFixed(1)}h`;
+                    node.infraStatus = node.infraCrisis;
+                    node.action = node.actionCrisis;
                     
                     if (currentRain >= 250) {
                         node.status = 'Inundação Crítica';
                         node.color = '#e11d48';
-                    } else if (currentRain >= 120) {
+                    } else {
                         node.status = 'Alerta de Cheia';
                         node.color = '#f59e0b';
-                    } else {
-                        node.status = 'Atenção';
-                        node.color = '#38bdf8';
                     }
                 }
             });
@@ -469,10 +476,11 @@
 
         function updateInfoPanel(node) {
             document.getElementById('info-node-cities').textContent = node.cities;
-            document.getElementById('info-node-infra').textContent = node.infra;
+            document.getElementById('info-node-infra').textContent = node.infraStatus;
             document.getElementById('info-node-escape').textContent = node.escape;
             
-            if (node.calculatedFloodTime === 'Sem risco') {
+            let currentRain = rainValues[node.rainRef];
+            if (currentRain < 80) {
                 document.getElementById('info-node-flood').textContent = `Sem risco (Seguro)`;
             } else {
                 document.getElementById('info-node-flood').textContent = `Inunda em ~${node.calculatedFloodTime}`;
@@ -481,8 +489,7 @@
             document.getElementById('info-node-action').textContent = node.action;
 
             // Atualização rigorosa do Gráfico de Curva de Nível Dinâmico
-            let currentRain = rainValues[node.rainRef];
-            let peakCota = (node.maxCota * (currentRain / 200)).toFixed(2);
+            let peakCota = currentRain < 80 ? 0.30 : (node.maxCota * (currentRain / 300)).toFixed(2);
             document.getElementById('chart-peak-val').textContent = `${peakCota} m`;
 
             let h1 = (peakCota * 0.35).toFixed(2);
@@ -495,10 +502,10 @@
             document.getElementById('val-bar3').textContent = `${h3}m`;
             document.getElementById('val-bar4').textContent = `${h4}m`;
 
-            let p1 = Math.min(Math.max((h1 / 8) * 100, 15), 100);
-            let p2 = Math.min(Math.max((h2 / 8) * 100, 25), 100);
-            let p3 = Math.min(Math.max((h3 / 8) * 100, 45), 100);
-            let p4 = Math.min(Math.max((h4 / 8) * 100, 65), 100);
+            let p1 = Math.min(Math.max((h1 / 8) * 100, 10), 100);
+            let p2 = Math.min(Math.max((h2 / 8) * 100, 10), 100);
+            let p3 = Math.min(Math.max((h3 / 8) * 100, 10), 100);
+            let p4 = Math.min(Math.max((h4 / 8) * 100, 10), 100);
 
             document.getElementById('bar-h1').style.height = `${p1}%`;
             document.getElementById('bar-h2').style.height = `${p2}%`;
@@ -599,7 +606,6 @@
                     ctx.lineWidth = 6;
                     ctx.beginPath();
                     ctx.arc(x, y, 26, 0, Math.PI * 2);
-                    ctx.stroke();
                     ctx.stroke();
                 }
 
