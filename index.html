@@ -27,8 +27,8 @@
                     <i class="fa-solid fa-water text-white text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">Simulador Hidrográfico Avançado (RS 2026)</h1>
-                    <p class="text-[11px] text-slate-400">Comandos de Cenários, Infraestruturas, Evacuação e Curvas de Cota</p>
+                    <h1 class="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">O Caminho das Águas: Monitoramento RS 2026</h1>
+                    <p class="text-[11px] text-slate-400">Integração Cemaden / Defesa Civil — Da Cabeceira ao Oceano</p>
                 </div>
             </div>
             <div class="flex items-center gap-3">
@@ -43,7 +43,7 @@
                 </div>
                 <div class="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 flex items-center gap-2">
                     <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="sim-status-dot"></div>
-                    <span id="time-display" class="text-xs font-mono font-semibold text-slate-300">Modelo 2026</span>
+                    <span id="time-display" class="text-xs font-mono font-semibold text-slate-300">Modelo Ativo</span>
                 </div>
             </div>
         </div>
@@ -58,7 +58,7 @@
             <!-- Controlos de Animação de Fluxo -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                    <i class="fa-solid fa-sliders"></i> Controlo de Fluxo
+                    <i class="fa-solid fa-sliders"></i> Controlo de Fluxo Hidrológico
                 </h3>
                 <div class="grid grid-cols-2 gap-2">
                     <button onclick="togglePlay()" id="play-btn" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
@@ -73,14 +73,14 @@
             <!-- Fatores de Chuva por Região -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                    <i class="fa-solid fa-cloud-rain"></i> Precipitação por Região (mm)
+                    <i class="fa-solid fa-cloud-rain"></i> Precipitação Acumulada (mm)
                 </h3>
-                <p class="text-[10px] text-slate-400">Ajuste os mm para recalcular automaticamente os tempos e infraestruturas.</p>
+                <p class="text-[10px] text-slate-400">Ajuste os mm para recalcular bacias e escoamento (Se 0mm, zonas ficam seguras).</p>
                 
                 <div class="space-y-2.5 pt-1">
                     <div>
                         <div class="flex justify-between text-[11px] text-slate-300 mb-1">
-                            <span>Serra / Noroeste (Cabeceiras)</span>
+                            <span>1. Noroeste & Planalto (Cabeceiras)</span>
                             <span id="val-serra" class="font-mono text-blue-400">0 mm</span>
                         </div>
                         <input type="range" id="range-serra" min="0" max="800" step="10" value="0" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('serra', this.value)">
@@ -88,7 +88,7 @@
 
                     <div>
                         <div class="flex justify-between text-[11px] text-slate-300 mb-1">
-                            <span>Rio Jacuí & Centro</span>
+                            <span>2. Centro & Taquari (Vales)</span>
                             <span id="val-jacui" class="font-mono text-blue-400">0 mm</span>
                         </div>
                         <input type="range" id="range-jacui" min="0" max="700" step="10" value="0" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('jacui', this.value)">
@@ -96,10 +96,18 @@
 
                     <div>
                         <div class="flex justify-between text-[11px] text-slate-300 mb-1">
-                            <span>Região Metropolitana</span>
+                            <span>3. Região Metropolitana (Sinos/Caí)</span>
                             <span id="val-metrop" class="font-mono text-blue-400">0 mm</span>
                         </div>
                         <input type="range" id="range-metrop" min="0" max="700" step="10" value="0" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('metrop', this.value)">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-[11px] text-slate-300 mb-1">
+                            <span>5. Fator Vento Sul (Represamento Foz)</span>
+                            <span id="val-wind" class="font-mono text-cyan-400">10 km/h</span>
+                        </div>
+                        <input type="range" id="range-wind" min="0" max="90" step="5" value="10" class="w-full accent-cyan-500 cursor-pointer" oninput="updateWind(this.value)">
                     </div>
                 </div>
             </div>
@@ -107,23 +115,23 @@
             <!-- Painel de Alertas Ativos da Proteção Civil -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-2">
-                    <i class="fa-solid fa-triangle-exclamation"></i> Alertas Ativos (2026)
+                    <i class="fa-solid fa-triangle-exclamation"></i> Alertas de Risco Ativos
                 </h3>
                 <div id="active-alerts-container" class="space-y-2 text-xs max-h-[160px] overflow-y-auto">
-                    <!-- Gerado automaticamente -->
+                    <!-- Gerado dinamicamente -->
                 </div>
             </div>
 
         </div>
 
-        <!-- Área Central: Mapa e Novos Painéis Avançados -->
+        <!-- Área Central: Mapa e Painéis Metodológicos -->
         <div class="lg:col-span-3 space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl relative flex flex-col">
                 
                 <!-- Barra superior do mapa -->
                 <div class="bg-slate-950/80 backdrop-blur border-b border-slate-800 px-4 py-3 flex justify-between items-center text-xs">
                     <span class="font-semibold text-slate-300 flex items-center gap-2">
-                        <i class="fa-solid fa-map text-blue-400"></i> Bacias, Rios e Previsão (Noroeste → Mar)
+                        <i class="fa-solid fa-water text-blue-400"></i> Percurso Hidrológico: Cabeceiras → Vales → Metropolitana → Guaíba → Lagoa/Mar
                     </span>
                     <div class="flex gap-2">
                         <button onclick="zoomIn()" class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 flex items-center justify-center"><i class="fa-solid fa-plus text-[10px]"></i></button>
@@ -137,33 +145,33 @@
                     <canvas id="hydroCanvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
                 </div>
 
-                <!-- Painel Detalhado do Nó Selecionado com Rotas de Evacuação e Infraestrutura -->
+                <!-- Painel Detalhado da Etapa Selecionada -->
                 <div class="bg-slate-950 border-t border-slate-800 p-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                     <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Cidades na Região</span>
-                        <span id="info-node-cities" class="font-bold text-white text-xs">Clique num nó do mapa</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Estação e Cidades</span>
+                        <span id="info-node-cities" class="font-bold text-white text-xs">Clique numa etapa do mapa</span>
                     </div>
                     <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Infraestruturas Críticas</span>
-                        <span id="info-node-infra" class="text-emerald-300 font-medium text-xs">Normal</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Método de Medição (Cemaden)</span>
+                        <span id="info-node-method" class="text-blue-300 font-medium text-xs">Sensores telemétricos</span>
                     </div>
                     <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Rotas de Fuga / Abrigos</span>
-                        <span id="info-node-escape" class="text-cyan-300 font-medium text-xs">Disponíveis</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Dinâmica de Escoamento</span>
+                        <span id="info-node-dynamics" class="text-cyan-300 font-medium text-xs">Fluxo normal</span>
                     </div>
                     <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Tempo até Inundação</span>
-                        <span id="info-node-flood" class="font-mono text-emerald-400 font-bold text-sm">Sem Risco</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Estado Atual</span>
+                        <span id="info-node-flood" class="font-mono text-emerald-400 font-bold text-sm">Seguro (0mm)</span>
                     </div>
                 </div>
 
             </div>
 
-            <!-- Painel Inferior: Gráfico de Curva de Nível Dinâmico e Status -->
+            <!-- Painel Inferior: Curva de Nível e Ações Oficiais -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
                     <h4 class="font-bold text-white text-xs mb-2 flex items-center justify-between">
-                        <span class="flex items-center gap-2"><i class="fa-solid fa-chart-line text-blue-400"></i> Curva de Nível Prevista</span>
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-chart-line text-blue-400"></i> Curva de Nível Altimétrica</span>
                         <span id="chart-peak-val" class="text-blue-400 font-mono font-bold">0.00 m</span>
                     </h4>
                     <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-end justify-between h-32 gap-3 pt-6">
@@ -192,14 +200,14 @@
                 <div class="flex flex-col justify-between space-y-2">
                     <div>
                         <h4 class="font-bold text-white text-xs mb-1 flex items-center gap-2">
-                            <i class="fa-solid fa-shield-halved text-emerald-400"></i> Ação Recomendada da Proteção Civil
+                            <i class="fa-solid fa-shield-halved text-emerald-400"></i> Orientações da Defesa Civil
                         </h4>
                         <p id="info-node-action" class="text-slate-300 text-xs leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800">
-                            Sem risco iminente de cheia com os níveis atuais de precipitação. Região segura.
+                            Volume de chuva zerado. Monitoramento contínuo ativo nas estações telemétricas sem alertas emitidos.
                         </p>
                     </div>
                     <div class="text-[10px] text-slate-400 italic text-right">
-                        Modelo Preditivo Integrado RS 2026
+                        Nota Técnica Cemaden & Protocolos RS 2026
                     </div>
                 </div>
             </div>
@@ -209,10 +217,10 @@
 
     <!-- Rodapé -->
     <footer class="max-w-7xl mx-auto px-4 py-4 mt-4 border-t border-slate-800 text-center text-xs text-slate-500">
-        <p>Plataforma Hidrográfica Avançada com Histórico, Infraestruturas, Rotas de Evacuação e Curvas de Cota (RS 2026).</p>
+        <p>Plataforma Hidrográfica baseada nas Diretrizes de Monitoramento do RS (Cabeceiras, Vales, Metropolitana, Guaíba, Lagoa dos Patos e Foz).</p>
     </footer>
 
-    <!-- Script com Correção Estrita de Chuva Zero -->
+    <!-- Script de Simulação Hidrográfica com Validação Estrita de Chuva Zero -->
     <script>
         const canvas = document.getElementById('hydroCanvas');
         const ctx = canvas.getContext('2d');
@@ -223,105 +231,81 @@
         let isDragging = false;
         let startX, startY;
 
+        let windSpeed = 10;
+
         let nodes = [
             { 
                 id: 'noroeste', 
-                name: 'Rio Uruguai / Noroeste', 
+                name: '1. Noroeste e Planalto', 
                 cities: 'Uruguaiana, Itapiranga, Porto Vera Cruz',
-                infraNormal: 'Ponte Internacional / BR-472 (Normal)',
-                infraCrisis: 'Ponte Internacional / BR-472 (Bloqueada)',
-                escape: 'Rotas Norte (Áreas altas)',
-                x: 0.35, y: 0.15, 
+                method: 'Estações telemétricas automáticas (Jacuí e Uruguai)',
+                dynamics: 'Topografia íngreme, escoamento rápido (enxurradas).',
                 maxCota: 4.5,
                 rainRef: 'serra',
-                status: 'Normal', color: '#10b981',
-                actionNormal: 'Monitorização preventiva rotineira.',
-                actionCrisis: 'Monitore encostas e margens.',
-                desc: 'Cabeceiras no Noroeste.' 
+                status: 'Seguro', color: '#10b981',
+                actionNormal: 'Monitoramento preventivo rotineiro nas cabeceiras.',
+                actionCrisis: '⚠️ Risco de enxurrada rápida nas cabeceiras! Alerta emitido.',
+                desc: 'Área mais alta.' 
             },
             { 
                 id: 'serra', 
-                name: 'Rio Taquari (Serra & Vales)', 
+                name: '2. Centro e Rio Taquari', 
                 cities: 'Muçum, Roca Sales, Lajeado, Estrela',
-                infraNormal: 'Pontes Históricas / BR-386 (Fluindo)',
-                infraCrisis: 'Pontes Históricas / BR-386 (Submersa/Bloqueada)',
-                escape: 'Pavilhões municipais (Zonas Altas)',
-                x: 0.65, y: 0.22, 
+                method: 'Réguas eletrônicas e sensores de radar em pontes',
+                dynamics: 'Vales profundos; nível sobe e desce de forma abrupta.',
                 maxCota: 6.2,
                 rainRef: 'serra',
-                status: 'Normal', color: '#10b981',
-                actionNormal: 'Nenhum alerta de cheia no momento.',
+                status: 'Seguro', color: '#10b981',
+                actionNormal: 'Nenhum alerta de cheia no sistema de vales.',
                 actionCrisis: '⚠️ EVACUAÇÃO IMEDIATA nas margens do Taquari!',
-                desc: 'Vales estreitos.' 
-            },
-            { 
-                id: 'jacui', 
-                name: 'Rio Jacuí (Centro do RS)', 
-                cities: 'Cachoeira do Sul, Santa Maria, Pantano Grande',
-                infraNormal: 'BR-290 (Aberta)',
-                infraCrisis: 'BR-290 / Travessias (Interditadas)',
-                escape: 'Abrigos em escolas municipais',
-                x: 0.45, y: 0.40, 
-                maxCota: 5.8,
-                rainRef: 'jacui',
-                status: 'Normal', color: '#10b981',
-                actionNormal: 'Fluxo regular no rio.',
-                actionCrisis: 'Alerta de interdição de pontes e estradas.',
-                desc: 'Coletor central.' 
+                desc: 'Vales profundos.' 
             },
             { 
                 id: 'metrop', 
-                name: 'Lago Guaíba (Porto Alegre / Sinos)', 
+                name: '3. Região Metropolitana', 
                 cities: 'Porto Alegre, Canoas, São Leopoldo, Novo Hamburgo',
-                infraNormal: 'Muro da Mauá / Aeroporto Operacionais',
-                infraCrisis: 'Muro da Mauá ultrapassado / Aeroporto Salgado Filho em risco',
-                escape: 'BR-116 Norte / Ginásios designados',
-                x: 0.55, y: 0.60, 
+                method: 'Sensores de pressão submersos (Rios Sinos, Caí, Gravataí)',
+                dynamics: 'Relevo plano; água perde velocidade e inunda por dias.',
+                maxCota: 5.8,
+                rainRef: 'metrop',
+                status: 'Seguro', color: '#10b981',
+                actionNormal: 'Cotas normais nos rios Sinos e Caí.',
+                actionCrisis: '⚠️ Alerta de transbordamento prolongado na bacia.',
+                desc: 'Bacia plana dos Sinos.' 
+            },
+            { 
+                id: 'guaiba', 
+                name: '4. Lago Guaíba', 
+                cities: 'Porto Alegre (Cais Mauá, Ilha da Pintada)',
+                method: 'Sensores em cota altimétrica conectados à Defesa Civil / Epagri',
+                dynamics: 'Gargalo coletor de todas as bacias do estado.',
                 maxCota: 4.77,
                 rainRef: 'metrop',
-                status: 'Normal', color: '#10b981',
-                actionNormal: 'Sistema de proteção contra cheias inativo (sem necessidade).',
-                actionCrisis: '🚨 Fechamento total de comportas e alerta metropolitano!',
-                desc: 'Funil metropolitano.' 
+                status: 'Seguro', color: '#10b981',
+                actionNormal: 'Sistema de contenção e comportas inativo (seguro).',
+                actionCrisis: '🚨 Nível crítico no Guaíba! Acionamento do Muro da Mauá.',
+                desc: 'Gargalo metropolitano.' 
             },
             { 
                 id: 'lagoon', 
-                name: 'Lagoa dos Patos (Zona Sul)', 
-                cities: 'Pelotas, São Lourenço do Sul, Tapes',
-                infraNormal: 'Canal São Gonçalo (Normal)',
-                infraCrisis: 'Canal São Gonçalo transbordando nas margens',
-                escape: 'Zonas altas de Pelotas',
-                x: 0.48, y: 0.80, 
+                name: '5. Lagoa dos Patos e Mar (Foz)', 
+                cities: 'Pelotas, São Lourenço do Sul, Rio Grande',
+                method: 'Marégrafos, boias oceanográficas e medição de vento sul',
+                dynamics: 'Vento sul empurra o mar e represa o escoamento dos rios.',
                 maxCota: 3.2,
                 rainRef: 'serra',
-                status: 'Normal', color: '#10b981',
-                actionNormal: 'Níveis estáveis na lagoa.',
-                actionCrisis: 'Preparar abrigos costeiros e barreiras móveis.',
-                desc: 'Zona estuarina sul.' 
-            },
-            { 
-                id: 'ocean', 
-                name: 'Oceano Atlântico (Barra de Rio Grande)', 
-                cities: 'Rio Grande, Cassino, São José do Norte',
-                infraNormal: 'Porto de Rio Grande (Operacional)',
-                infraCrisis: 'Escoamento estrangulado na barra',
-                escape: 'Áreas elevadas da Zona Leste',
-                x: 0.52, y: 0.95, 
-                maxCota: 1.5,
-                rainRef: 'serra',
-                status: 'Normal', color: '#10b981',
-                actionNormal: 'Maré em condições normais.',
-                actionCrisis: 'Monitorização do represamento no estuário.',
-                desc: 'Estuário final.' 
+                status: 'Seguro', color: '#10b981',
+                actionNormal: 'Escoamento livre em direção ao Atlântico.',
+                actionCrisis: '⚠️ Represamento severo por Vento Sul na barra de Rio Grande!',
+                desc: 'Foz e estuário.' 
             }
         ];
 
-        const connections = [
-            { from: 'noroeste', to: 'jacui' },
+        let connections = [
+            { from: 'noroeste', to: 'serra' },
             { from: 'serra', to: 'metrop' },
-            { from: 'jacui', to: 'metrop' },
-            { from: 'metrop', to: 'lagoon' },
-            { from: 'lagoon', to: 'ocean' }
+            { from: 'metrop', to: 'guaiba' },
+            { from: 'guaiba', to: 'lagoon' }
         ];
 
         let rainValues = {
@@ -362,15 +346,25 @@
             const mouseY = (e.clientY - rect.top - offsetY) / scale;
 
             nodes.forEach(node => {
-                const nx = node.x * canvas.width;
-                const ny = node.y * canvas.height;
-                const dist = Math.hypot(mouseX - nx, mouseY - ny);
-                if (dist < 30) {
+                let coords = getNodeCoordinates(node.id, canvas.width, canvas.height);
+                const dist = Math.hypot(mouseX - coords.x, mouseY - coords.y);
+                if (dist < 35) {
                     selectedNode = node;
                     updateInfoPanel(node);
                 }
             });
         });
+
+        function getNodeCoordinates(id, w, h) {
+            switch(id) {
+                case 'noroeste': return { x: w * 0.18, y: h * 0.25 };
+                case 'serra': return { x: w * 0.38, y: h * 0.40 };
+                case 'metrop': return { x: w * 0.58, y: h * 0.55 };
+                case 'guaiba': return { x: w * 0.75, y: h * 0.45 };
+                case 'lagoon': return { x: w * 0.88, y: h * 0.75 };
+                default: return { x: w * 0.5, y: h * 0.5 };
+            }
+        }
 
         function zoomIn() { scale = Math.min(scale * 1.2, 3); }
         function zoomOut() { scale = Math.max(scale / 1.2, 0.7); }
@@ -418,28 +412,41 @@
             if (selectedNode) updateInfoPanel(selectedNode);
         }
 
+        function updateWind(val) {
+            windSpeed = parseInt(val);
+            document.getElementById('val-wind').textContent = `${windSpeed} km/h`;
+            calculateHydroDynamics();
+            updateActiveAlerts();
+            if (selectedNode) updateInfoPanel(selectedNode);
+        }
+
         function changeScenario(scenario) {
             if (scenario === '2024') {
                 rainValues.serra = 650;
                 rainValues.jacui = 480;
                 rainValues.metrop = 520;
+                windSpeed = 65;
             } else if (scenario === 'moderate') {
                 rainValues.serra = 120;
                 rainValues.jacui = 80;
                 rainValues.metrop = 90;
+                windSpeed = 20;
             } else {
                 rainValues.serra = 0;
                 rainValues.jacui = 0;
                 rainValues.metrop = 0;
+                windSpeed = 10;
             }
 
             document.getElementById('range-serra').value = rainValues.serra;
             document.getElementById('range-jacui').value = rainValues.jacui;
             document.getElementById('range-metrop').value = rainValues.metrop;
+            document.getElementById('range-wind').value = windSpeed;
 
             document.getElementById('val-serra').textContent = `${rainValues.serra} mm`;
             document.getElementById('val-jacui').textContent = `${rainValues.jacui} mm`;
             document.getElementById('val-metrop').textContent = `${rainValues.metrop} mm`;
+            document.getElementById('val-wind').textContent = `${windSpeed} km/h`;
 
             calculateHydroDynamics();
             updateActiveAlerts();
@@ -450,20 +457,18 @@
             nodes.forEach(node => {
                 let currentRain = rainValues[node.rainRef];
                 
-                // Validação estrita: se a chuva for menor que 80mm, o status é obrigatoriamente NORMAL e SEM RISCO
-                if (currentRain < 80) {
+                // REGRAS RIGOROSAS DE SEGURANÇA: Se chuva for menor que 80mm e vento moderado, o status é SEGURO.
+                if (currentRain < 80 && (node.id !== 'lagoon' || windSpeed < 45)) {
                     node.calculatedFloodTime = 'Sem risco';
-                    node.status = 'Normal';
+                    node.status = 'Seguro';
                     node.color = '#10b981';
                     node.action = node.actionNormal;
-                    node.infraStatus = node.infraNormal;
                 } else {
-                    let floodHours = Math.max(1, (14 / (currentRain / 100)));
+                    let floodHours = Math.max(1, (16 / ((currentRain + (node.id === 'lagoon' ? windSpeed * 0.8 : 0)) / 100)));
                     node.calculatedFloodTime = `${floodHours.toFixed(1)}h`;
-                    node.infraStatus = node.infraCrisis;
                     node.action = node.actionCrisis;
                     
-                    if (currentRain >= 250) {
+                    if (currentRain >= 250 || (node.id === 'lagoon' && windSpeed >= 50)) {
                         node.status = 'Inundação Crítica';
                         node.color = '#e11d48';
                     } else {
@@ -476,20 +481,19 @@
 
         function updateInfoPanel(node) {
             document.getElementById('info-node-cities').textContent = node.cities;
-            document.getElementById('info-node-infra').textContent = node.infraStatus;
-            document.getElementById('info-node-escape').textContent = node.escape;
+            document.getElementById('info-node-method').textContent = node.method;
+            document.getElementById('info-node-dynamics').textContent = node.dynamics;
             
             let currentRain = rainValues[node.rainRef];
-            if (currentRain < 80) {
-                document.getElementById('info-node-flood').textContent = `Sem risco (Seguro)`;
+            if (currentRain < 80 && (node.id !== 'lagoon' || windSpeed < 45)) {
+                document.getElementById('info-node-flood').textContent = `Seguro (Sem Risco)`;
             } else {
-                document.getElementById('info-node-flood').textContent = `Inunda em ~${node.calculatedFloodTime}`;
+                document.getElementById('info-node-flood').textContent = `Impacto em ~${node.calculatedFloodTime}`;
             }
 
             document.getElementById('info-node-action').textContent = node.action;
 
-            // Atualização rigorosa do Gráfico de Curva de Nível Dinâmico
-            let peakCota = currentRain < 80 ? 0.30 : (node.maxCota * (currentRain / 300)).toFixed(2);
+            let peakCota = currentRain < 80 ? 0.30 : (node.maxCota * ((currentRain + (node.id === 'lagoon' ? windSpeed * 0.5 : 0)) / 300)).toFixed(2);
             document.getElementById('chart-peak-val').textContent = `${peakCota} m`;
 
             let h1 = (peakCota * 0.35).toFixed(2);
@@ -502,15 +506,10 @@
             document.getElementById('val-bar3').textContent = `${h3}m`;
             document.getElementById('val-bar4').textContent = `${h4}m`;
 
-            let p1 = Math.min(Math.max((h1 / 8) * 100, 10), 100);
-            let p2 = Math.min(Math.max((h2 / 8) * 100, 10), 100);
-            let p3 = Math.min(Math.max((h3 / 8) * 100, 10), 100);
-            let p4 = Math.min(Math.max((h4 / 8) * 100, 10), 100);
-
-            document.getElementById('bar-h1').style.height = `${p1}%`;
-            document.getElementById('bar-h2').style.height = `${p2}%`;
-            document.getElementById('bar-h3').style.height = `${p3}%`;
-            document.getElementById('bar-h4').style.height = `${p4}%`;
+            document.getElementById('bar-h1').style.height = `${Math.min(Math.max((h1/8)*100, 10), 100)}%`;
+            document.getElementById('bar-h2').style.height = `${Math.min(Math.max((h2/8)*100, 10), 100)}%`;
+            document.getElementById('bar-h3').style.height = `${Math.min(Math.max((h3/8)*100, 10), 100)}%`;
+            document.getElementById('bar-h4').style.height = `${Math.min(Math.max((h4/8)*100, 10), 100)}%`;
         }
 
         function updateActiveAlerts() {
@@ -519,8 +518,8 @@
 
             if (criticalNodes.length === 0) {
                 container.innerHTML = `
-                    <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-center">
-                        Nenhum alerta crítico com a precipitação atual. Cidades seguras.
+                    <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-emerald-400 text-center font-medium">
+                        ✓ Nenhuma cidade sob alerta com os volumes atuais.
                     </div>
                 `;
                 return;
@@ -533,7 +532,7 @@
                         <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${n.status === 'Inundação Crítica' ? 'bg-rose-600 text-white' : 'bg-amber-500 text-slate-950'}">${n.status}</span>
                     </div>
                     <p class="text-[11px] text-slate-300"><strong>Cidades:</strong> ${n.cities}</p>
-                    <p class="text-[10px] text-rose-300 font-medium"><strong>Água inunda em:</strong> ~${n.calculatedFloodTime}</p>
+                    <p class="text-[10px] text-rose-300 font-medium"><strong>Tempo estimado:</strong> ~${n.calculatedFloodTime}</p>
                 </div>
             `).join('');
         }
@@ -546,13 +545,18 @@
                 const fromNode = nodes.find(n => n.id === conn.from);
                 const toNode = nodes.find(n => n.id === conn.to);
                 particles.push({
-                    x: fromNode.x, y: fromNode.y,
-                    targetX: toNode.x, targetY: toNode.y,
-                    progress: 0, speed: 0.007 + Math.random() * 0.004
+                    x: fromNode.id, targetX: toNode.id,
+                    fromCoords: getNodeCoordinates(fromNode.id, canvas.width, canvas.height),
+                    toCoords: getNodeCoordinates(toNode.id, canvas.width, canvas.height),
+                    progress: 0, speed: 0.008 + Math.random() * 0.004
                 });
             }
 
-            particles.forEach(p => p.progress += p.speed);
+            particles.forEach(p => {
+                p.fromCoords = getNodeCoordinates(p.x, canvas.width, canvas.height);
+                p.toCoords = getNodeCoordinates(p.targetX, canvas.width, canvas.height);
+                p.progress += p.speed;
+            });
             particles = particles.filter(p => p.progress <= 1);
         }
 
@@ -563,30 +567,23 @@
             ctx.translate(offsetX, offsetY);
             ctx.scale(scale, scale);
 
+            // Desenhar conexões (rios)
             connections.forEach(conn => {
-                const from = nodes.find(n => n.id === conn.from);
-                const to = nodes.find(n => n.id === conn.to);
-                const startX = from.x * canvas.width;
-                const startY = from.y * canvas.height;
-                const endX = to.x * canvas.width;
-                const endY = to.y * canvas.height;
+                const fromCoords = getNodeCoordinates(conn.from, canvas.width, canvas.height);
+                const toCoords = getNodeCoordinates(conn.to, canvas.width, canvas.height);
 
                 ctx.strokeStyle = '#1e3a8a';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 4;
                 ctx.beginPath();
-                ctx.moveTo(startX, startY);
-                ctx.quadraticCurveTo((startX + endX) / 2 + 25, (startY + endY) / 2, endX, endY);
+                ctx.moveTo(fromCoords.x, fromCoords.y);
+                ctx.quadraticCurveTo((fromCoords.x + toCoords.x) / 2, (fromCoords.y + toCoords.y) / 2 + 20, toCoords.x, toCoords.y);
                 ctx.stroke();
             });
 
+            // Partículas de fluxo
             particles.forEach(p => {
-                const startX = p.x * canvas.width;
-                const startY = p.y * canvas.height;
-                const endX = p.targetX * canvas.width;
-                const endY = p.targetY * canvas.height;
-
-                const currX = startX + (endX - startX) * p.progress;
-                const currY = startY + (endY - startY) * p.progress;
+                const currX = p.fromCoords.x + (p.toCoords.x - p.fromCoords.x) * p.progress;
+                const currY = p.fromCoords.y + (p.toCoords.y - p.fromCoords.y) * p.progress;
 
                 ctx.fillStyle = '#38bdf8';
                 ctx.shadowBlur = 8;
@@ -597,15 +594,17 @@
                 ctx.shadowBlur = 0;
             });
 
+            // Nós / Estações
             nodes.forEach(node => {
-                const x = node.x * canvas.width;
-                const y = node.y * canvas.height;
+                const coords = getNodeCoordinates(node.id, canvas.width, canvas.height);
+                const x = coords.x;
+                const y = coords.y;
 
                 if (node.status === 'Inundação Crítica') {
-                    ctx.strokeStyle = 'rgba(225, 29, 72, 0.4)';
+                    ctx.strokeStyle = 'rgba(225, 29, 72, 0.5)';
                     ctx.lineWidth = 6;
                     ctx.beginPath();
-                    ctx.arc(x, y, 26, 0, Math.PI * 2);
+                    ctx.arc(x, y, 28, 0, Math.PI * 2);
                     ctx.stroke();
                 }
 
@@ -613,7 +612,7 @@
                 ctx.shadowBlur = 12;
                 ctx.shadowColor = node.color;
                 ctx.beginPath();
-                ctx.arc(x, y, 16, 0, Math.PI * 2);
+                ctx.arc(x, y, 18, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.shadowBlur = 0;
 
@@ -624,11 +623,11 @@
                 ctx.fillStyle = '#f8fafc';
                 ctx.font = 'bold 11px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(node.name, x, y + 32);
+                ctx.fillText(node.name, x, y + 34);
 
-                ctx.fillStyle = '#94a3b8';
+                ctx.fillStyle = node.status === 'Seguro' ? '#34d399' : '#f87171';
                 ctx.font = '10px monospace';
-                ctx.fillText(node.status, x, y - 22);
+                ctx.fillText(node.status, x, y - 24);
             });
 
             ctx.restore();
