@@ -11,9 +11,9 @@
     <style>
         .map-canvas {
             background: #030712;
-            background-image: radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.05) 0%, transparent 80%),
-                              linear-gradient(rgba(15, 23, 42, 0.2) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(15, 23, 42, 0.2) 1px, transparent 1px);
+            background-image: radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.08) 0%, transparent 80%),
+                              linear-gradient(rgba(15, 23, 42, 0.25) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(15, 23, 42, 0.25) 1px, transparent 1px);
             background-size: 100% 100%, 32px 32px, 32px 32px;
         }
     </style>
@@ -132,7 +132,7 @@
                 <!-- Barra superior do mapa -->
                 <div class="bg-slate-950/80 backdrop-blur border-b border-slate-800 px-4 py-3 flex justify-between items-center text-xs">
                     <span class="font-semibold text-slate-300 flex items-center gap-2">
-                        <i class="fa-solid fa-water text-blue-400"></i> Percurso Hidrológico: Cabeceiras → Vales → Metropolitana → Guaíba → Lagoa/Mar
+                        <i class="fa-solid fa-water text-blue-400"></i> Percurso Hidrológico: Cabeceiras → Pontes Críticas → Guaíba → Lagoa/Mar
                     </span>
                     <div class="flex gap-2">
                         <button onclick="zoomIn()" class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 flex items-center justify-center"><i class="fa-solid fa-plus text-[10px]"></i></button>
@@ -221,7 +221,7 @@
         <p>Plataforma Hidrográfica baseada nas Diretrizes de Monitoramento do RS (Cabeceiras, Vales, Metropolitana, Guaíba, Lagoa dos Patos e Foz).</p>
     </footer>
 
-    <!-- Script com Ilustração Animada Avançada de Rios e Água -->
+    <!-- Script com Pontes Mapeadas entre as Bolinhas -->
     <script>
         const canvas = document.getElementById('hydroCanvas');
         const ctx = canvas.getContext('2d');
@@ -304,10 +304,10 @@
         ];
 
         let connections = [
-            { from: 'noroeste', to: 'serra' },
-            { from: 'serra', to: 'metrop' },
-            { from: 'metrop', to: 'guaiba' },
-            { from: 'guaiba', to: 'lagoon' }
+            { from: 'noroeste', to: 'serra', bridgeName: 'Ponte Uruguaiana / BR-472' },
+            { from: 'serra', to: 'metrop', bridgeName: 'Ponte de Murtosa / BR-386' },
+            { from: 'metrop', to: 'guaiba', bridgeName: 'Ponte do Guaíba / BR-290' },
+            { from: 'guaiba', to: 'lagoon', bridgeName: 'Canal São Gonçalo / Pelotas' }
         ];
 
         let rainValues = {
@@ -360,9 +360,9 @@
         function getNodeCoordinates(id, w, h) {
             switch(id) {
                 case 'noroeste': return { x: w * 0.15, y: h * 0.30 };
-                case 'serra': return { x: w * 0.35, y: h * 0.45 };
-                case 'metrop': return { x: w * 0.55, y: h * 0.60 };
-                case 'guaiba': return { x: w * 0.75, y: h * 0.45 };
+                case 'serra': return { x: w * 0.38, y: h * 0.45 };
+                case 'metrop': return { x: w * 0.60, y: h * 0.55 };
+                case 'guaiba': return { x: w * 0.78, y: h * 0.40 };
                 case 'lagoon': return { x: w * 0.88, y: h * 0.70 };
                 default: return { x: w * 0.5, y: h * 0.5 };
             }
@@ -539,16 +539,16 @@
         }
 
         function updateSimulation() {
-            waveOffset += 0.05;
+            waveOffset += 0.035;
             if (!isRunning) return;
 
             let intensityFactor = Math.max(1, (rainValues.serra + rainValues.jacui + rainValues.metrop) / 100);
 
-            if (Math.random() < 0.8) {
+            if (Math.random() < 0.5) {
                 const conn = connections[Math.floor(Math.random() * connections.length)];
                 particles.push({
                     x: conn.from, targetX: conn.to,
-                    progress: 0, speed: (0.006 + Math.random() * 0.005) * intensityFactor
+                    progress: 0, speed: (0.005 + Math.random() * 0.003) * Math.min(intensityFactor, 1.5)
                 });
             }
 
@@ -563,42 +563,69 @@
             ctx.translate(offsetX, offsetY);
             ctx.scale(scale, scale);
 
-            // Desenhar os rios em formato de calha natural estilizada com ondulação e volume variável
+            // Desenhar os rios
             connections.forEach((conn, index) => {
                 const fromCoords = getNodeCoordinates(conn.from, canvas.width, canvas.height);
                 const toCoords = getNodeCoordinates(conn.to, canvas.width, canvas.height);
 
                 let avgRain = (rainValues.serra + rainValues.jacui + rainValues.metrop) / 3;
-                let riverWidth = Math.min(6 + (avgRain / 40), 22);
+                let riverWidth = Math.min(10 + (avgRain / 30), 28);
 
-                // Sombra da calha do rio
                 ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = riverWidth + 4;
+                ctx.lineWidth = riverWidth + 8;
                 ctx.lineCap = 'round';
                 ctx.beginPath();
                 ctx.moveTo(fromCoords.x, fromCoords.y);
-                ctx.quadraticCurveTo((fromCoords.x + toCoords.x) / 2, (fromCoords.y + toCoords.y) / 2 + 25, toCoords.x, toCoords.y);
+                ctx.quadraticCurveTo((fromCoords.x + toCoords.x) / 2, (fromCoords.y + toCoords.y) / 2 + 30, toCoords.x, toCoords.y);
                 ctx.stroke();
 
-                // Corpo d'água animado com efeito de ondas
-                ctx.strokeStyle = avgRain > 100 ? '#38bdf8' : '#0284c7';
+                let riverGrad = ctx.createLinearGradient(fromCoords.x, fromCoords.y, toCoords.x, toCoords.y);
+                riverGrad.addColorStop(0, '#38bdf8');
+                riverGrad.addColorStop(0.5, '#0284c7');
+                riverGrad.addColorStop(1, '#0284c7');
+
+                ctx.strokeStyle = riverGrad;
                 ctx.lineWidth = riverWidth;
-                ctx.setLineDash([12, 6]);
-                ctx.lineDashOffset = -waveOffset * (index + 5);
+                ctx.setLineDash([18, 10]);
+                ctx.lineDashOffset = -waveOffset * 18;
                 ctx.beginPath();
                 ctx.moveTo(fromCoords.x, fromCoords.y);
-                ctx.quadraticCurveTo((fromCoords.x + toCoords.x) / 2, (fromCoords.y + toCoords.y) / 2 + 25, toCoords.x, toCoords.y);
+                ctx.quadraticCurveTo((fromCoords.x + toCoords.x) / 2, (fromCoords.y + toCoords.y) / 2 + 30, toCoords.x, toCoords.y);
                 ctx.stroke();
-                ctx.setLineDash([]); // Reset
+                ctx.setLineDash([]);
+
+                // Ícones e marcações de Pontes Estratégicas mapeadas entre as estações
+                let midX = (fromCoords.x + toCoords.x) / 2;
+                let midY = (fromCoords.y + toCoords.y) / 2 + 15;
+
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.arc(midX, midY, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#38bdf8';
+                ctx.stroke();
+
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = '10px "Font Awesome 6 Free", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🌉', midX, midY);
+
+                // Nome da Ponte / Travessia
+                ctx.textBaseline = 'alphabetic';
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '9px sans-serif';
+                ctx.fillText(conn.bridgeName, midX, midY + 22);
             });
 
-            // Partículas de água em fluxo dinâmico
+            // Partículas de água
             particles.forEach(p => {
                 const fromCoords = getNodeCoordinates(p.x, canvas.width, canvas.height);
                 const toCoords = getNodeCoordinates(p.targetX, canvas.width, canvas.height);
 
                 const currX = fromCoords.x + (toCoords.x - fromCoords.x) * p.progress;
-                const currY = fromCoords.y + (toCoords.y - fromCoords.y) * p.progress + Math.sin(p.progress * Math.PI * 4 + waveOffset) * 4;
+                const currY = fromCoords.y + (toCoords.y - fromCoords.y) * p.progress + Math.sin(p.progress * Math.PI * 4 + waveOffset) * 3;
 
                 ctx.fillStyle = '#bae6fd';
                 ctx.shadowBlur = 10;
@@ -609,27 +636,23 @@
                 ctx.shadowBlur = 0;
             });
 
-            // Desenhar Estações / Nós Hidrográficos com efeito de pulso e cota visual
+            // Nós / Estações
             nodes.forEach(node => {
                 const coords = getNodeCoordinates(node.id, canvas.width, canvas.height);
                 const x = coords.x;
                 const y = coords.y;
 
-                let currentRain = rainValues[node.rainRef];
-
-                // Círculo de transbordo (onda expansiva se crítico)
                 if (node.status === 'Inundação Crítica' || node.status === 'Alerta de Cheia') {
-                    let pulseSize = 22 + Math.sin(waveOffset * 3) * 6;
-                    ctx.strokeStyle = node.status === 'Inundação Crítica' ? 'rgba(225, 29, 72, 0.6)' : 'rgba(245, 158, 11, 0.6)';
+                    let pulseSize = 24 + Math.sin(waveOffset * 3) * 6;
+                    ctx.strokeStyle = node.status === 'Inundação Crítica' ? 'rgba(225, 29, 72, 0.7)' : 'rgba(245, 158, 11, 0.7)';
                     ctx.lineWidth = 4;
                     ctx.beginPath();
                     ctx.arc(x, y, pulseSize, 0, Math.PI * 2);
                     ctx.stroke();
                 }
 
-                // Base do nó (estação telemétrica)
                 ctx.fillStyle = node.color;
-                ctx.shadowBlur = 16;
+                ctx.shadowBlur = 18;
                 ctx.shadowColor = node.color;
                 ctx.beginPath();
                 ctx.arc(x, y, 22, 0, Math.PI * 2);
@@ -640,18 +663,16 @@
                 ctx.strokeStyle = '#ffffff';
                 ctx.stroke();
 
-                // Ícone ou indicador central na estação
                 ctx.fillStyle = '#ffffff';
                 ctx.font = '12px "Font Awesome 6 Free", sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('💧', x, y);
 
-                // Rótulos explicativos
                 ctx.textBaseline = 'alphabetic';
                 ctx.fillStyle = '#f8fafc';
                 ctx.font = 'bold 11px sans-serif';
-                ctx.fillText(node.name, x, y + 40);
+                ctx.fillText(node.name, x, y + 38);
 
                 ctx.fillStyle = node.status === 'Seguro' ? '#34d399' : '#f87171';
                 ctx.font = 'bold 10px monospace';
