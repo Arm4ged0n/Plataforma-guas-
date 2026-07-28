@@ -253,49 +253,49 @@
 const NODES = {
   serra: {
     id:'serra', name:'Serra / Noroeste', sub:'Cotiporã, Bento Gonçalves, Muçum',
-    x:0.16, y:0.10, type:'cabeceira', cota:1.2, max:3.0, vazao:80,
+    x:0.16, y:0.10, type:'cabeceira', cota:1.2, max:3.0, vazao:80, decay:0.08,
     isSource:true, rain:0,
     desc:'Cabeceiras de relevo acidentado. Chuvas intensas aqui geram deslizamentos e enxurradas que descem rapidamente para os vales — foi nessa região que ocorreu o rompimento parcial da Barragem 14 de Julho em 2024.',
     hist2024:{peak:3.0, peakDay:2, label:'Enxurradas e deslizamentos (30/abr–01/mai)'}
   },
   taquari: {
     id:'taquari', name:'Rio Taquari', sub:'Lajeado, Estrela, Muçum',
-    x:0.30, y:0.24, type:'rio', cota:1.85, max:5.0, vazao:250,
+    x:0.30, y:0.24, type:'rio', cota:1.85, max:5.0, vazao:250, decay:0.06,
     isSource:false, rain:0,
     desc:'Um dos primeiros rios a colapsar em 2024. Subiu dezenas de metros acima do normal em poucas horas, submergindo andares inteiros de construções em Lajeado e Estrela.',
     hist2024:{peak:5.0, peakDay:3, label:'Pico histórico em 01/mai/2024'}
   },
   jacui: {
     id:'jacui', name:'Rio Jacuí', sub:'Depressão Central',
-    x:0.44, y:0.36, type:'rio', cota:1.65, max:4.5, vazao:180,
+    x:0.44, y:0.36, type:'rio', cota:1.65, max:4.5, vazao:180, decay:0.06,
     isSource:true, rain:0,
     desc:'Drena grande parte do centro e oeste do estado. Funciona como a principal artéria de escoamento para a região metropolitana, recebendo volumes vindos da Depressão Central.',
     hist2024:{peak:4.5, peakDay:4, label:'Alagamento de municípios ribeirinhos (02/mai)'}
   },
   sinos: {
     id:'sinos', name:'Rio dos Sinos', sub:'São Leopoldo, Novo Hamburgo, Canoas',
-    x:0.58, y:0.40, type:'rio', cota:1.2, max:4.0, vazao:120,
+    x:0.58, y:0.40, type:'rio', cota:1.2, max:4.0, vazao:120, decay:0.06,
     isSource:true, rain:0,
     desc:'Deságua na Região Metropolitana. Provocou inundações históricas em Canoas, onde bairros inteiros ficaram debaixo d\'água, desalojando dezenas de milhares de pessoas.',
     hist2024:{peak:4.0, peakDay:4, label:'Canoas submersa (03–05/mai)'}
   },
   guaiba: {
     id:'guaiba', name:'Lago Guaíba', sub:'Porto Alegre',
-    x:0.50, y:0.53, type:'lago', cota:2.5, max:4.77, vazao:420,
+    x:0.50, y:0.53, type:'lago', cota:2.5, max:4.77, vazao:420, decay:0.015,
     isSource:false, rain:0,
     desc:'Funil que recebe toda a água dos rios Taquari, Jacuí, Sinos e Gravataí. Em 03/mai/2024 atingiu 4,77m, superando o recorde histórico de 1941 (4,76m). Sistema de comportas (Casa da Mauá) foi parcialmente inundado.',
     hist2024:{peak:4.77, peakDay:5, label:'RECORDE HISTÓRICO — 4,77m em 03/mai/2024'}
   },
   lagoa: {
     id:'lagoa', name:'Lagoa dos Patos', sub:'Pelotas, Rio Grande, São José do Norte',
-    x:0.54, y:0.72, type:'lagoa', cota:0.95, max:2.5, vazao:420,
+    x:0.54, y:0.72, type:'lagoa', cota:0.95, max:2.5, vazao:420, decay:0.004,
     isSource:false, rain:0,
     desc:'Gigantesco estuário que recebe o volume represado na região metropolitana com semanas de atraso. Em 2024 encheu a níveis jamais registrados, atingindo cidades litorâneas que não esperavam ser atingidas.',
     hist2024:{peak:2.5, peakDay:14, label:'Canal São Gonçalo (Pelotas) atinge 3m — meados de maio'}
   },
   oceano: {
     id:'oceano', name:'Barra / Oceano Atlântico', sub:'Rio Grande – Cassino',
-    x:0.52, y:0.90, type:'oceano', cota:0.4, max:1.2, vazao:420,
+    x:0.52, y:0.90, type:'oceano', cota:0.4, max:1.2, vazao:420, decay:0.004,
     isSource:false, rain:0,
     desc:'Ponto de escoamento final. Ventos e marés meteorológicas desfavoráveis reduzem a capacidade do oceano de "engolir" a vazão, criando um gargalo hidráulico que mantém a Lagoa dos Patos elevada por semanas.',
     hist2024:{peak:1.2, peakDay:16, label:'Gargalo de escoamento prolongado'}
@@ -623,12 +623,14 @@ function logEvent(msg, level='info'){
 function startSim(){
   if(simRunning) return;
   simRunning=true;
+  lastTickTime = Date.now(); // evita "pulo" de tempo real acumulado durante a pausa
   logEvent('Simulação iniciada.', 'info');
   simInterval = setInterval(tick, 100);
   updateClockUI();
 }
 function pauseSim(){
   simRunning=false;
+  lastTickTime = null;
   clearInterval(simInterval);
   updateClockUI();
 }
@@ -637,6 +639,7 @@ function resetSim(){
   simClock=0;
   particles=[];
   eventLog=[];
+  lastTickTime = null;
   Object.values(NODES).forEach(n=>{
     n.cota = NODE_BASE[n.id];
     n.rain = 0;
@@ -647,8 +650,20 @@ function resetSim(){
   if(activeTab==='sim'){ renderPanel(); }
 }
 
+let lastTickTime = null;
+
 function tick(){
-  const dt = simSpeed * (100/1000); // horas por tick de 100ms
+  const now = Date.now();
+  let dt;
+  if(liveState.active){
+    // Modo Tempo Real: 1 segundo real = 1 segundo real de hidrologia.
+    // Sem isso, minutos de chat viravam "meses" simulados e saturava tudo no teto.
+    dt = lastTickTime ? (now - lastTickTime)/1000/3600 : 100/1000/3600;
+  } else {
+    // Simulador manual: tempo comprimido pra poder demonstrar rápido
+    dt = simSpeed * (100/1000);
+  }
+  lastTickTime = now;
   simClock += dt;
 
   // fontes com chuva ativa: sobe a cota local e gera partículas
@@ -688,11 +703,14 @@ function tick(){
     }
   }
 
-  // leve decaimento natural (escoamento) quando não há chuva alimentando
+  // decaimento natural (escoamento) — cada tipo de corpo d'água recua num
+  // ritmo diferente na vida real: rio recua em horas/dias, Guaíba em dias,
+  // Lagoa dos Patos em semanas. Isso evita o nó "travar" artificialmente
+  // no teto mesmo depois que a chuva real já parou.
   Object.values(NODES).forEach(n=>{
     const base = NODE_BASE[n.id];
     if(n.cota>base){
-      n.cota -= (n.cota-base) * 0.002 * dt;
+      n.cota -= (n.cota-base) * n.decay * dt;
     }
     checkAlert(n);
   });
@@ -1179,7 +1197,8 @@ function renderLiveTab(el){
       <button class="btn btn-primary" id="btnToggleLive">
         ${liveState.active ? '⏸ Desativar Tempo Real' : '🛰️ Ativar Tempo Real'}
       </button>
-      <p style="margin-top:8px;">${liveState.active ? 'Atualizando chuva real a cada 10 minutos e propagando no mapa.' : 'Ao ativar, a plataforma busca a chuva real agora e a cada 10 min, alimentando a cascata automaticamente.'}</p>
+      <button class="btn btn-outline" id="btnResetLive">↻ Resetar cotas (zerar acumulado)</button>
+      <p style="margin-top:8px;">${liveState.active ? 'Atualizando chuva real a cada 10 minutos e propagando no mapa em tempo real (1s real = 1s de hidrologia — não mais acelerado).' : 'Ao ativar, a plataforma busca a chuva real agora e a cada 10 min, alimentando a cascata automaticamente em tempo real.'}</p>
       ${liveState.lastFetch ? `<div class="node-sub" style="margin-top:8px;">Última atualização: ${liveState.lastFetch.toLocaleTimeString('pt-BR')}</div>` : ''}
     </div>
 
@@ -1201,6 +1220,11 @@ function renderLiveTab(el){
 
   document.getElementById('btnToggleLive').onclick = ()=>{
     liveState.active ? desativarModoTempoReal() : ativarModoTempoReal();
+  };
+  document.getElementById('btnResetLive').onclick = ()=>{
+    resetSim();
+    if(liveState.active) aplicarChuvaReal();
+    renderPanel();
   };
 }
 
