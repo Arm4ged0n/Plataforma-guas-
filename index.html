@@ -811,6 +811,7 @@ function renderSimTab(el){
   });
   document.querySelectorAll('.rainSlider').forEach(s=>{
     s.addEventListener('input', e=>{
+      if(liveState.active) desativarModoTempoReal(); // ajuste manual assume controle total
       const id = e.target.dataset.node;
       NODES[id].rain = parseInt(e.target.value);
       document.querySelector(`.rv-${id}`).textContent = e.target.value;
@@ -819,12 +820,14 @@ function renderSimTab(el){
   });
 
   document.getElementById('btnPlay').onclick = ()=>{
+    if(liveState.active) desativarModoTempoReal(); // modos são mutuamente exclusivos
     simRunning ? pauseSim() : startSim();
     renderSimTab(el);
   };
   document.getElementById('btnReset').onclick = resetSim;
   document.getElementById('speedSlider').oninput = e=>{ simSpeed=parseInt(e.target.value); renderSimTab(el); };
   document.getElementById('btnPreset2024').onclick = ()=>{
+    if(liveState.active) desativarModoTempoReal(); // modos são mutuamente exclusivos
     NODES.serra.rain=90; NODES.jacui.rain=70; NODES.sinos.rain=65;
     logEvent('Cenário Maio/2024 carregado: chuva extrema em todas as regiões-fonte.', 'alert');
     if(!simRunning) startSim();
@@ -1149,13 +1152,15 @@ function aplicarChuvaReal(){
 }
 
 async function ativarModoTempoReal(){
+  if(simRunning) pauseSim(); // encerra qualquer simulação manual em andamento
+  resetSim(); // começa de um estado limpo — sem resíduo de testes manuais anteriores
   liveState.active = true;
   updateLiveBadge();
   await fetchChuvaReal();
   aplicarChuvaReal();
   await testarANALegado();
-  if(!simRunning) startSim();
-  logEvent('Modo Tempo Real ativado — chuva real (Open-Meteo) alimentando a simulação.', 'info');
+  startSim();
+  logEvent('Modo Tempo Real ativado — chuva real (Open-Meteo) alimentando a simulação em tempo real (1s = 1s).', 'info');
 
   liveState.intervalId = setInterval(async ()=>{
     try{
