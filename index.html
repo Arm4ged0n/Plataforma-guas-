@@ -1,697 +1,1254 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador Hidrográfico Completo Avançado — RS 2026</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .map-canvas {
-            background: #030712;
-            background-image: radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.08) 0%, transparent 80%),
-                              linear-gradient(rgba(15, 23, 42, 0.25) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(15, 23, 42, 0.25) 1px, transparent 1px);
-            background-size: 100% 100%, 32px 32px, 32px 32px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plataforma Interativa - Fluxo de Águas RS</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#101a2e; --panel2:#0d1626; --line:#1e2c47;
+    --accent:#3aa0ff; --accent2:#ffb020; --danger:#ff4d4f; --ok:#2ecc71;
+    --text:#e6edf7; --muted:#8aa0c4;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{ height:100%; }
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    height:100dvh; overflow:hidden;
+  }
+  .app{display:grid; grid-template-rows:auto auto 1fr; height:100dvh; height:100vh;}
+
+  /* HEADER */
+  header{
+    padding:12px 18px; border-bottom:1px solid var(--line); display:flex;
+    justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+    background:var(--panel);
+  }
+  header h1{font-size:16px; font-weight:600;}
+  header .sub{font-size:11px; color:var(--muted); margin-top:2px;}
+  .clock{
+    font-family:'Courier New',monospace; font-size:13px; background:#000;
+    color:var(--accent2); padding:6px 12px; border-radius:6px; border:1px solid var(--line);
+    min-width:170px; text-align:center; flex-shrink:0;
+  }
+  .live-badge{
+    font-size:11px; font-weight:700; padding:6px 12px; border-radius:6px;
+    background:rgba(138,160,196,.12); color:var(--muted); border:1px solid var(--line);
+    flex-shrink:0; white-space:nowrap;
+  }
+  .live-badge.on{ background:rgba(46,204,113,.15); color:var(--ok); border-color:rgba(46,204,113,.3); }
+  @media (max-width:640px){
+    header{padding:10px 12px;}
+    header h1{font-size:13.5px; line-height:1.3;}
+    header .sub{display:none;}
+    .clock{font-size:11px; min-width:auto; padding:5px 8px;}
+    .live-badge{font-size:10px; padding:5px 8px;}
+  }
+
+  /* TABS */
+  nav.tabs{
+    display:flex; gap:4px; padding:8px 18px; background:var(--panel2);
+    border-bottom:1px solid var(--line);
+    overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  }
+  nav.tabs::-webkit-scrollbar{display:none;}
+  nav.tabs button{
+    background:transparent; border:1px solid var(--line); color:var(--muted);
+    padding:8px 16px; border-radius:6px 6px 0 0; font-size:12px; font-weight:600;
+    cursor:pointer; transition:.15s; white-space:nowrap; flex-shrink:0;
+  }
+  nav.tabs button:hover{color:var(--text);}
+  nav.tabs button.active{background:var(--bg); color:var(--accent); border-bottom-color:var(--bg);}
+  @media (max-width:640px){
+    nav.tabs{padding:6px 10px;}
+    nav.tabs button{padding:8px 12px; font-size:11.5px;}
+  }
+
+  /* MAIN LAYOUT */
+  main{display:grid; grid-template-columns:1fr 340px; overflow:hidden;}
+  .map-area{position:relative; overflow:hidden; background:radial-gradient(circle at 30% 20%, #0f1b30, #060a12 80%);}
+  #mapCanvas{display:block; cursor:grab; width:100%; height:100%; touch-action:none;}
+  #mapCanvas.dragging{cursor:grabbing;}
+
+  @media (max-width:640px){
+    main{
+      grid-template-columns:1fr;
+      grid-template-rows:45vh 1fr;
+      overflow-y:auto;
+    }
+    .map-area{ height:45vh; min-height:280px; }
+    aside{ border-left:none; border-top:1px solid var(--line); }
+  }
+
+  .map-controls{
+    position:absolute; top:14px; right:14px; display:flex; flex-direction:column; gap:6px; z-index:5;
+  }
+  .map-controls button{
+    width:34px; height:34px; border-radius:6px; border:1px solid var(--line);
+    background:rgba(16,26,46,.9); color:var(--text); font-size:16px; cursor:pointer;
+  }
+  .map-controls button:hover{background:var(--panel);}
+
+  .map-hint{
+    position:absolute; bottom:12px; left:14px; font-size:11px; color:var(--muted);
+    background:rgba(16,26,46,.85); padding:6px 10px; border-radius:6px; border:1px solid var(--line);
+    max-width:320px; z-index:5;
+  }
+
+  .legend-float{
+    position:absolute; top:14px; left:14px; background:rgba(16,26,46,.9); border:1px solid var(--line);
+    border-radius:8px; padding:10px 12px; font-size:11px; z-index:5;
+  }
+  .legend-float div{display:flex; align-items:center; gap:6px; margin-bottom:4px;}
+  .legend-float span.dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
+
+  @media (max-width:640px){
+    .legend-float{ padding:6px 8px; font-size:9.5px; top:8px; left:8px; }
+    .legend-float div{ margin-bottom:2px; }
+    .legend-float span.dot{ width:8px; height:8px; }
+    .map-hint{ display:none; }
+    .map-controls{ top:8px; right:8px; }
+    .map-controls button{ width:30px; height:30px; font-size:14px; }
+  }
+
+  /* SIDE PANEL */
+  aside{
+    background:var(--panel); border-left:1px solid var(--line); overflow-y:auto;
+    padding:16px; display:flex; flex-direction:column; gap:16px;
+    -webkit-overflow-scrolling:touch;
+  }
+  @media (max-width:640px){
+    aside{ padding:12px; gap:12px; }
+  }
+  .card{background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:14px;}
+  .card h3{font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--accent); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .src-badge{
+    font-size:9px; text-transform:none; letter-spacing:0; font-weight:700;
+    padding:3px 7px; border-radius:10px; flex-shrink:0;
+  }
+  .src-sim{ background:rgba(138,160,196,.15); color:var(--muted); }
+  .src-live{ background:rgba(46,204,113,.15); color:var(--ok); }
+  .card h4{font-size:14px; margin-bottom:6px;}
+  .card p{font-size:12px; color:var(--muted); line-height:1.6;}
+
+  .node-title{font-size:16px; font-weight:700; margin-bottom:2px;}
+  .node-sub{font-size:11px; color:var(--muted); margin-bottom:10px;}
+
+  .stat-row{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
+  .stat-row .label{font-size:11px; color:var(--muted);}
+  .stat-row .val{font-size:15px; font-weight:700;}
+  .badge{display:inline-block; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:.3px;}
+  .b-ok{background:rgba(46,204,113,.15); color:var(--ok);}
+  .b-warn{background:rgba(255,176,32,.15); color:var(--accent2);}
+  .b-danger{background:rgba(255,77,79,.15); color:var(--danger);}
+
+  .bar{height:8px; border-radius:4px; background:#1c2740; overflow:hidden; margin:6px 0 2px;}
+  .bar-fill{height:100%; border-radius:4px; transition:width .25s;}
+
+  canvas.spark{width:100%; height:60px; background:#0a1120; border-radius:6px; border:1px solid var(--line);}
+
+  label.field{display:block; font-size:11px; color:var(--muted); margin-bottom:4px; margin-top:10px;}
+  input[type=range]{width:100%; accent-color:var(--accent);}
+  input[type=number]{
+    width:100%; background:#0a1120; border:1px solid var(--line); color:var(--text);
+    padding:6px 8px; border-radius:6px; font-size:12px;
+  }
+
+  .btn{
+    width:100%; padding:9px; border-radius:6px; border:none; font-size:12px; font-weight:700;
+    cursor:pointer; margin-top:8px; transition:.15s;
+  }
+  .btn-primary{background:var(--accent); color:#001527;}
+  .btn-primary:hover{background:#5cb2ff;}
+  .btn-outline{background:transparent; border:1px solid var(--line); color:var(--text);}
+  .btn-outline:hover{border-color:var(--accent); color:var(--accent);}
+  .btn-danger{background:transparent; border:1px solid var(--danger); color:var(--danger);}
+  .btn-danger:hover{background:rgba(255,77,79,.1);}
+
+  .rain-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .rain-item{background:#0a1120; border:1px solid var(--line); border-radius:6px; padding:8px;}
+  .rain-item .name{font-size:10px; color:var(--muted); margin-bottom:4px;}
+  .rain-item .value{font-size:13px; font-weight:700; color:var(--accent2);}
+
+  .timeline-wrap{display:flex; flex-direction:column; gap:8px;}
+  .timeline-date{font-size:14px; font-weight:700; color:var(--accent2); text-align:center;}
+  .tl-controls{display:flex; gap:6px; align-items:center;}
+  .tl-controls button{
+    background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:6px;
+    width:34px; height:34px; cursor:pointer; font-size:14px;
+  }
+
+  .log{
+    font-family:'Courier New',monospace; font-size:10.5px; max-height:160px; overflow-y:auto;
+    background:#050a14; border-radius:6px; padding:8px; border:1px solid var(--line);
+  }
+  .log div{color:var(--muted); margin-bottom:3px;}
+  .log div.alert{color:var(--accent2);}
+  .log div.critical{color:var(--danger); font-weight:700;}
+
+  .hidden{display:none !important;}
+
+  .empty-state{text-align:center; color:var(--muted); font-size:12px; padding:30px 10px;}
+  .empty-state .icon{font-size:30px; margin-bottom:10px;}
+
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
+</style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-blue-600 selection:text-white">
+<body>
+<div class="app">
 
-    <!-- Cabeçalho -->
-    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
-            <div class="flex items-center space-x-3">
-                <div class="bg-blue-600 p-2 rounded-xl shadow-md shadow-blue-900/50">
-                    <i class="fa-solid fa-water text-white text-lg"></i>
-                </div>
-                <div>
-                    <h1 class="text-lg md:text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">O Caminho das Águas: Monitoramento RS 2026</h1>
-                    <p class="text-[11px] text-slate-400">Integração Cemaden / Defesa Civil — Da Cabeceira ao Oceano</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <!-- Seletor de Cenário Histórico vs 2026 -->
-                <div class="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 flex items-center gap-2">
-                    <span class="text-[10px] text-slate-400 uppercase font-mono">Cenário:</span>
-                    <select id="scenario-select" onchange="changeScenario(this.value)" class="bg-slate-900 text-xs text-blue-400 font-semibold rounded px-2 py-0.5 border border-slate-700 focus:outline-none">
-                        <option value="custom">Personalizado (2026)</option>
-                        <option value="2024">Histórico Crítico (Maio 2024)</option>
-                        <option value="moderate">Chuva Moderada (2026)</option>
-                    </select>
-                </div>
-                <div class="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 flex items-center gap-2">
-                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="sim-status-dot"></div>
-                    <span id="time-display" class="text-xs font-mono font-semibold text-slate-300">Modelo Ativo</span>
-                </div>
-            </div>
-        </div>
-    </header>
+  <header>
+    <div>
+      <h1>🌊 Plataforma Interativa — Fluxo de Águas do Rio Grande do Sul</h1>
+      <div class="sub">Simulação hidrológica em cascata • Mapa clicável • Linha do tempo do evento de 2024</div>
+    </div>
+    <div class="clock" id="clockDisplay">Dia 0 · 00h · pausado</div>
+    <div class="live-badge" id="liveBadge">🎲 Modo Simulação</div>
+  </header>
 
-    <!-- Conteúdo Principal -->
-    <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="sim">▶ Simulador em Cascata</button>
+    <button class="tab-btn" data-tab="hist">🕒 Linha do Tempo 2024</button>
+    <button class="tab-btn" data-tab="explore">🔍 Explorar Nó</button>
+    <button class="tab-btn" data-tab="live">🛰️ Tempo Real</button>
+  </nav>
 
-        <!-- Painel Esquerdo: Controlos e Chuva -->
-        <div class="lg:col-span-1 space-y-4">
-            
-            <!-- Controlos de Animação de Fluxo -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                    <i class="fa-solid fa-sliders"></i> Controlo de Fluxo Hidrológico
-                </h3>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="togglePlay()" id="play-btn" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-play" id="play-icon"></i> <span id="play-text">Iniciar Fluxo</span>
-                    </button>
-                    <button onclick="resetSim()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-rotate-right"></i> Reiniciar
-                    </button>
-                </div>
-            </div>
+  <main>
+    <div class="map-area">
+      <canvas id="mapCanvas"></canvas>
 
-            <!-- Fatores de Chuva por Região -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                    <i class="fa-solid fa-cloud-rain"></i> Precipitação Acumulada (mm)
-                </h3>
-                <p class="text-[10px] text-slate-400">Ajuste os mm para gerar ondas de cheia visíveis no mapa.</p>
-                
-                <div class="space-y-2.5 pt-1">
-                    <div>
-                        <div class="flex justify-between text-[11px] text-slate-300 mb-1">
-                            <span>1. Noroeste & Planalto (Cabeceiras)</span>
-                            <span id="val-serra" class="font-mono text-blue-400">0 mm</span>
-                        </div>
-                        <input type="range" id="range-serra" min="0" max="800" step="10" value="0" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('serra', this.value)">
-                    </div>
+      <div class="legend-float">
+        <div><span class="dot" style="background:#2ecc71"></span> Normal (&lt;60%)</div>
+        <div><span class="dot" style="background:#ffb020"></span> Alerta (60–100%)</div>
+        <div><span class="dot" style="background:#ff4d4f"></span> Crítico (&gt;100%)</div>
+        <div><span class="dot" style="background:#3aa0ff"></span> Partícula de água em trânsito</div>
+      </div>
 
-                    <div>
-                        <div class="flex justify-between text-[11px] text-slate-300 mb-1">
-                            <span>2. Centro & Taquari (Vales)</span>
-                            <span id="val-jacui" class="font-mono text-blue-400">0 mm</span>
-                        </div>
-                        <input type="range" id="range-jacui" min="0" max="700" step="10" value="0" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('jacui', this.value)">
-                    </div>
+      <div class="map-controls">
+        <button id="zoomIn">+</button>
+        <button id="zoomOut">−</button>
+        <button id="zoomReset">⟲</button>
+      </div>
 
-                    <div>
-                        <div class="flex justify-between text-[11px] text-slate-300 mb-1">
-                            <span>3. Região Metropolitana (Sinos/Caí)</span>
-                            <span id="val-metrop" class="font-mono text-blue-400">0 mm</span>
-                        </div>
-                        <input type="range" id="range-metrop" min="0" max="700" step="10" value="0" class="w-full accent-emerald-500 cursor-pointer" oninput="updateRain('metrop', this.value)">
-                    </div>
+      <div class="map-hint">Clique em um nó para inspecionar. Arraste para mover o mapa. Scroll para zoom.</div>
+    </div>
 
-                    <div>
-                        <div class="flex justify-between text-[11px] text-slate-300 mb-1">
-                            <span>5. Fator Vento Sul (Represamento Foz)</span>
-                            <span id="val-wind" class="font-mono text-cyan-400">10 km/h</span>
-                        </div>
-                        <input type="range" id="range-wind" min="0" max="90" step="5" value="10" class="w-full accent-cyan-500 cursor-pointer" oninput="updateWind(this.value)">
-                    </div>
-                </div>
-            </div>
+    <aside id="sidePanel">
+      <!-- conteúdo injetado via JS conforme aba ativa -->
+    </aside>
+  </main>
+</div>
 
-            <!-- Painel de Alertas Ativos da Proteção Civil -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-2">
-                    <i class="fa-solid fa-triangle-exclamation"></i> Alertas de Risco Ativos
-                </h3>
-                <div id="active-alerts-container" class="space-y-2 text-xs max-h-[160px] overflow-y-auto">
-                    <!-- Gerado dinamicamente -->
-                </div>
-            </div>
+<script>
+/* =========================================================
+   MODELO DE DADOS
+   Cada nó representa um trecho da bacia hidrográfica.
+   Posições são esquemáticas (não são coordenadas GPS reais),
+   organizadas para refletir o fluxo Norte→Sul descrito nos
+   relatos do evento de abril/maio de 2024.
+========================================================= */
 
-        </div>
+const NODES = {
+  serra: {
+    id:'serra', name:'Serra / Noroeste', sub:'Cotiporã, Bento Gonçalves, Muçum',
+    x:0.16, y:0.10, type:'cabeceira', cota:1.2, max:3.0, vazao:80,
+    isSource:true, rain:0,
+    desc:'Cabeceiras de relevo acidentado. Chuvas intensas aqui geram deslizamentos e enxurradas que descem rapidamente para os vales — foi nessa região que ocorreu o rompimento parcial da Barragem 14 de Julho em 2024.',
+    hist2024:{peak:3.0, peakDay:2, label:'Enxurradas e deslizamentos (30/abr–01/mai)'}
+  },
+  taquari: {
+    id:'taquari', name:'Rio Taquari', sub:'Lajeado, Estrela, Muçum',
+    x:0.30, y:0.24, type:'rio', cota:1.85, max:5.0, vazao:250,
+    isSource:false, rain:0,
+    desc:'Um dos primeiros rios a colapsar em 2024. Subiu dezenas de metros acima do normal em poucas horas, submergindo andares inteiros de construções em Lajeado e Estrela.',
+    hist2024:{peak:5.0, peakDay:3, label:'Pico histórico em 01/mai/2024'}
+  },
+  jacui: {
+    id:'jacui', name:'Rio Jacuí', sub:'Depressão Central',
+    x:0.44, y:0.36, type:'rio', cota:1.65, max:4.5, vazao:180,
+    isSource:true, rain:0,
+    desc:'Drena grande parte do centro e oeste do estado. Funciona como a principal artéria de escoamento para a região metropolitana, recebendo volumes vindos da Depressão Central.',
+    hist2024:{peak:4.5, peakDay:4, label:'Alagamento de municípios ribeirinhos (02/mai)'}
+  },
+  sinos: {
+    id:'sinos', name:'Rio dos Sinos', sub:'São Leopoldo, Novo Hamburgo, Canoas',
+    x:0.58, y:0.40, type:'rio', cota:1.2, max:4.0, vazao:120,
+    isSource:true, rain:0,
+    desc:'Deságua na Região Metropolitana. Provocou inundações históricas em Canoas, onde bairros inteiros ficaram debaixo d\'água, desalojando dezenas de milhares de pessoas.',
+    hist2024:{peak:4.0, peakDay:4, label:'Canoas submersa (03–05/mai)'}
+  },
+  guaiba: {
+    id:'guaiba', name:'Lago Guaíba', sub:'Porto Alegre',
+    x:0.50, y:0.53, type:'lago', cota:2.5, max:4.77, vazao:420,
+    isSource:false, rain:0,
+    desc:'Funil que recebe toda a água dos rios Taquari, Jacuí, Sinos e Gravataí. Em 03/mai/2024 atingiu 4,77m, superando o recorde histórico de 1941 (4,76m). Sistema de comportas (Casa da Mauá) foi parcialmente inundado.',
+    hist2024:{peak:4.77, peakDay:5, label:'RECORDE HISTÓRICO — 4,77m em 03/mai/2024'}
+  },
+  lagoa: {
+    id:'lagoa', name:'Lagoa dos Patos', sub:'Pelotas, Rio Grande, São José do Norte',
+    x:0.54, y:0.72, type:'lagoa', cota:0.95, max:2.5, vazao:420,
+    isSource:false, rain:0,
+    desc:'Gigantesco estuário que recebe o volume represado na região metropolitana com semanas de atraso. Em 2024 encheu a níveis jamais registrados, atingindo cidades litorâneas que não esperavam ser atingidas.',
+    hist2024:{peak:2.5, peakDay:14, label:'Canal São Gonçalo (Pelotas) atinge 3m — meados de maio'}
+  },
+  oceano: {
+    id:'oceano', name:'Barra / Oceano Atlântico', sub:'Rio Grande – Cassino',
+    x:0.52, y:0.90, type:'oceano', cota:0.4, max:1.2, vazao:420,
+    isSource:false, rain:0,
+    desc:'Ponto de escoamento final. Ventos e marés meteorológicas desfavoráveis reduzem a capacidade do oceano de "engolir" a vazão, criando um gargalo hidráulico que mantém a Lagoa dos Patos elevada por semanas.',
+    hist2024:{peak:1.2, peakDay:16, label:'Gargalo de escoamento prolongado'}
+  }
+};
 
-        <!-- Área Central: Mapa e Painéis Metodológicos -->
-        <div class="lg:col-span-3 space-y-4">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl relative flex flex-col">
-                
-                <!-- Barra superior do mapa -->
-                <div class="bg-slate-950/80 backdrop-blur border-b border-slate-800 px-4 py-3 flex justify-between items-center text-xs">
-                    <span class="font-semibold text-slate-300 flex items-center gap-2">
-                        <i class="fa-solid fa-water text-blue-400"></i> Percurso Hidrológico: Cabeceiras → Pontes Críticas → Guaíba → Lagoa/Mar
-                    </span>
-                    <div class="flex gap-2">
-                        <button onclick="zoomIn()" class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 flex items-center justify-center"><i class="fa-solid fa-plus text-[10px]"></i></button>
-                        <button onclick="zoomOut()" class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 flex items-center justify-center"><i class="fa-solid fa-minus text-[10px]"></i></button>
-                        <button onclick="resetZoom()" class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 flex items-center justify-center"><i class="fa-solid fa-rotate-right text-[10px]"></i></button>
-                    </div>
-                </div>
+// Arestas: de -> para, tempo de viagem em horas (escala didática), e influência (quanto da cota extra é repassada)
+const EDGES = [
+  {from:'serra',   to:'taquari', hours:5,  factor:0.9},
+  {from:'taquari', to:'guaiba',  hours:14, factor:0.55},
+  {from:'jacui',   to:'guaiba',  hours:9,  factor:0.5},
+  {from:'sinos',   to:'guaiba',  hours:7,  factor:0.45},
+  {from:'guaiba',  to:'lagoa',   hours:60, factor:0.4},
+  {from:'lagoa',   to:'oceano',  hours:48, factor:0.5},
+];
 
-                <!-- Canvas -->
-                <div class="relative w-full h-[380px] md:h-[420px] overflow-hidden map-canvas flex items-center justify-center">
-                    <canvas id="hydroCanvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
-                </div>
+const NODE_BASE = {}; // guarda cota inicial para reset
+Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
 
-                <!-- Painel Detalhado da Etapa Selecionada -->
-                <div class="bg-slate-950 border-t border-slate-800 p-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-                    <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Estação e Cidades</span>
-                        <span id="info-node-cities" class="font-bold text-white text-xs">Clique numa etapa do mapa</span>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Método de Medição (Cemaden)</span>
-                        <span id="info-node-method" class="text-blue-300 font-medium text-xs">Sensores telemétricos</span>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Dinâmica de Escoamento</span>
-                        <span id="info-node-dynamics" class="text-cyan-300 font-medium text-xs">Fluxo normal</span>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Estado Atual</span>
-                        <span id="info-node-flood" class="font-mono text-emerald-400 font-bold text-sm">Seguro (0mm)</span>
-                    </div>
-                </div>
+/* =========================================================
+   DADOS HISTÓRICOS ILUSTRATIVOS — abril/maio 2024
+   Modelo educativo construído a partir dos relatos públicos
+   do evento (não é série oficial minuto a minuto). O ponto
+   âncora real é o recorde do Guaíba: 4,77m em 03/mai/2024.
+========================================================= */
+const HIST_DAYS = 24; // dia 0 = 27/abr, dia 23 = 20/mai (aprox.)
+function histCota(nodeId, day){
+  const n = NODES[nodeId];
+  const peakDay = n.hist2024.peakDay;
+  const peak = n.hist2024.peak;
+  const base = NODE_BASE[nodeId];
+  if(day <= peakDay){
+    const t = day/peakDay;
+    return base + (peak-base) * Math.pow(t, 1.6);
+  } else {
+    const t = (day-peakDay)/(HIST_DAYS-peakDay);
+    const decayTarget = base + (peak-base)*0.25; // não volta totalmente ao normal na janela
+    return peak - (peak-decayTarget) * Math.pow(t, 0.8);
+  }
+}
+function histDateLabel(day){
+  const start = new Date(2024,3,27); // 27 abr 2024
+  const d = new Date(start.getTime() + day*86400000);
+  return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
+}
 
-            </div>
+/* =========================================================
+   CANVAS / MAPA
+========================================================= */
+const canvas = document.getElementById('mapCanvas');
+const ctx = canvas.getContext('2d');
+let view = {scale:1, offX:0, offY:0};
+let dragging=false, dragStart={x:0,y:0}, dragOff0={x:0,y:0};
+let selectedNode = null;
+let hoverNode = null;
 
-            <!-- Painel Inferior: Curva de Nível e Ações Oficiais -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <div>
-                    <h4 class="font-bold text-white text-xs mb-2 flex items-center justify-between">
-                        <span class="flex items-center gap-2"><i class="fa-solid fa-chart-line text-blue-400"></i> Curva de Nível Altimétrica</span>
-                        <span id="chart-peak-val" class="text-blue-400 font-mono font-bold">0.00 m</span>
-                    </h4>
-                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-end justify-between h-32 gap-3 pt-6">
-                        <div class="flex flex-col items-center flex-1 h-full justify-end">
-                            <span id="val-bar1" class="text-[9px] text-slate-300 mb-1 font-mono">0.00m</span>
-                            <div id="bar-h1" class="w-full bg-blue-600 rounded-t transition-all duration-300 min-h-[10px]" style="height: 10%"></div>
-                            <span class="text-[9px] text-slate-400 mt-1">12h</span>
-                        </div>
-                        <div class="flex flex-col items-center flex-1 h-full justify-end">
-                            <span id="val-bar2" class="text-[9px] text-slate-300 mb-1 font-mono">0.00m</span>
-                            <div id="bar-h2" class="w-full bg-blue-500 rounded-t transition-all duration-300 min-h-[10px]" style="height: 10%"></div>
-                            <span class="text-[9px] text-slate-400 mt-1">24h</span>
-                        </div>
-                        <div class="flex flex-col items-center flex-1 h-full justify-end">
-                            <span id="val-bar3" class="text-[9px] text-slate-300 mb-1 font-mono">0.00m</span>
-                            <div id="bar-h3" class="w-full bg-indigo-500 rounded-t transition-all duration-300 min-h-[10px]" style="height: 10%"></div>
-                            <span class="text-[9px] text-slate-400 mt-1">36h</span>
-                        </div>
-                        <div class="flex flex-col items-center flex-1 h-full justify-end">
-                            <span id="val-bar4" class="text-[9px] text-slate-300 mb-1 font-mono">0.00m</span>
-                            <div id="bar-h4" class="w-full bg-emerald-500 rounded-t transition-all duration-300 min-h-[10px]" style="height: 10%"></div>
-                            <span class="text-[9px] text-slate-400 mt-1">48h (Pico)</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex flex-col justify-between space-y-2">
-                    <div>
-                        <h4 class="font-bold text-white text-xs mb-1 flex items-center gap-2">
-                            <i class="fa-solid fa-shield-halved text-emerald-400"></i> Orientações da Defesa Civil
-                        </h4>
-                        <p id="info-node-action" class="text-slate-300 text-xs leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800">
-                            Volume de chuva zerado. Monitoramento contínuo ativo nas estações telemétricas sem alertas emitidos.
-                        </p>
-                    </div>
-                    <div class="text-[10px] text-slate-400 italic text-right">
-                        Nota Técnica Cemaden & Protocolos RS 2026
-                    </div>
-                </div>
-            </div>
-        </div>
+function resizeCanvas(){
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  canvas.style.width = rect.width+'px';
+  canvas.style.height = rect.height+'px';
+  drawMap();
+}
+window.addEventListener('resize', resizeCanvas);
 
-    </main>
+function toScreen(nx, ny){
+  const w = canvas.width, h = canvas.height;
+  const pad = 0.12;
+  const px = (pad + nx*(1-2*pad)) * w;
+  const py = (pad + ny*(1-2*pad)) * h;
+  return {
+    x: px*view.scale + view.offX,
+    y: py*view.scale + view.offY
+  };
+}
 
-    <!-- Rodapé -->
-    <footer class="max-w-7xl mx-auto px-4 py-4 mt-4 border-t border-slate-800 text-center text-xs text-slate-500">
-        <p>Plataforma Hidrográfica baseada nas Diretrizes de Monitoramento do RS (Cabeceiras, Vales, Metropolitana, Guaíba, Lagoa dos Patos e Foz).</p>
-    </footer>
+function nodeColor(n){
+  const pct = n.cota/n.max;
+  if(pct>=1) return '#ff4d4f';
+  if(pct>=0.6) return '#ffb020';
+  return '#2ecc71';
+}
 
-    <!-- Script com Pontes Mapeadas entre as Bolinhas -->
-    <script>
-        const canvas = document.getElementById('hydroCanvas');
-        const ctx = canvas.getContext('2d');
+function drawMap(){
+  const w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h);
 
-        let scale = 1;
-        let offsetX = 0;
-        let offsetY = 0;
-        let isDragging = false;
-        let startX, startY;
+  // fundo estilo "terreno"
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'#0f1b30');
+  grad.addColorStop(1,'#060a12');
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,w,h);
 
-        let windSpeed = 10;
-        let waveOffset = 0;
+  // arestas (rios)
+  EDGES.forEach(e=>{
+    const a = toScreen(NODES[e.from].x, NODES[e.from].y);
+    const b = toScreen(NODES[e.to].x, NODES[e.to].y);
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 + 30*view.scale;
 
-        let nodes = [
-            { 
-                id: 'noroeste', 
-                name: '1. Noroeste e Planalto', 
-                cities: 'Uruguaiana, Itapiranga, Porto Vera Cruz',
-                method: 'Estações telemétricas automáticas (Jacuí e Uruguai)',
-                dynamics: 'Topografia íngreme, escoamento rápido (enxurradas).',
-                maxCota: 4.5,
-                rainRef: 'serra',
-                status: 'Seguro', color: '#10b981',
-                actionNormal: 'Monitoramento preventivo rotineiro nas cabeceiras.',
-                actionCrisis: '⚠️ Risco de enxurrada rápida nas cabeceiras! Alerta emitido.',
-                desc: 'Área mais alta.' 
-            },
-            { 
-                id: 'serra', 
-                name: '2. Centro e Rio Taquari', 
-                cities: 'Muçum, Roca Sales, Lajeado, Estrela',
-                method: 'Réguas eletrônicas e sensores de radar em pontes',
-                dynamics: 'Vales profundos; nível sobe e desce de forma abrupta.',
-                maxCota: 6.2,
-                rainRef: 'serra',
-                status: 'Seguro', color: '#10b981',
-                actionNormal: 'Nenhum alerta de cheia no sistema de vales.',
-                actionCrisis: '⚠️ EVACUAÇÃO IMEDIATA nas margens do Taquari!',
-                desc: 'Vales profundos.' 
-            },
-            { 
-                id: 'metrop', 
-                name: '3. Região Metropolitana', 
-                cities: 'Porto Alegre, Canoas, São Leopoldo, Novo Hamburgo',
-                method: 'Sensores de pressão submersos (Rios Sinos, Caí, Gravataí)',
-                dynamics: 'Relevo plano; água perde velocidade e inunda por dias.',
-                maxCota: 5.8,
-                rainRef: 'metrop',
-                status: 'Seguro', color: '#10b981',
-                actionNormal: 'Cotas normais nos rios Sinos e Caí.',
-                actionCrisis: '⚠️ Alerta de transbordamento prolongado na bacia.',
-                desc: 'Bacia plana dos Sinos.' 
-            },
-            { 
-                id: 'guaiba', 
-                name: '4. Lago Guaíba', 
-                cities: 'Porto Alegre (Cais Mauá, Ilha da Pintada)',
-                method: 'Sensores em cota altimétrica conectados à Defesa Civil / Epagri',
-                dynamics: 'Gargalo coletor de todas as bacias do estado.',
-                maxCota: 4.77,
-                rainRef: 'metrop',
-                status: 'Seguro', color: '#10b981',
-                actionNormal: 'Sistema de contenção e comportas inativo (seguro).',
-                actionCrisis: '🚨 Nível crítico no Guaíba! Acionamento do Muro da Mauá.',
-                desc: 'Gargalo metropolitano.' 
-            },
-            { 
-                id: 'lagoon', 
-                name: '5. Lagoa dos Patos e Mar (Foz)', 
-                cities: 'Pelotas, São Lourenço do Sul, Rio Grande',
-                method: 'Marégrafos, boias oceanográficas e medição de vento sul',
-                dynamics: 'Vento sul empurra o mar e represa o escoamento dos rios.',
-                maxCota: 3.2,
-                rainRef: 'serra',
-                status: 'Seguro', color: '#10b981',
-                actionNormal: 'Escoamento livre em direção ao Atlântico.',
-                actionCrisis: '⚠️ Represamento severo por Vento Sul na barra de Rio Grande!',
-                desc: 'Foz e estuário.' 
-            }
-        ];
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y);
+    ctx.quadraticCurveTo(mx,my,b.x,b.y);
+    ctx.strokeStyle = 'rgba(58,160,255,0.35)';
+    ctx.lineWidth = Math.max(2, 5*view.scale);
+    ctx.stroke();
 
-        let connections = [
-            { from: 'noroeste', to: 'serra', bridgeName: 'Ponte Uruguaiana / BR-472' },
-            { from: 'serra', to: 'metrop', bridgeName: 'Ponte de Murtosa / BR-386' },
-            { from: 'metrop', to: 'guaiba', bridgeName: 'Ponte do Guaíba / BR-290' },
-            { from: 'guaiba', to: 'lagoon', bridgeName: 'Canal São Gonçalo / Pelotas' }
-        ];
+    // seta de direção no meio
+    const t=0.5;
+    const px = (1-t)*(1-t)*a.x + 2*(1-t)*t*mx + t*t*b.x;
+    const py = (1-t)*(1-t)*a.y + 2*(1-t)*t*my + t*t*b.y;
+    const dx = 2*(1-t)*(mx-a.x) + 2*t*(b.x-mx);
+    const dy = 2*(1-t)*(my-a.y) + 2*t*(b.y-my);
+    const ang = Math.atan2(dy,dx);
+    ctx.save();
+    ctx.translate(px,py);
+    ctx.rotate(ang);
+    ctx.fillStyle='rgba(58,160,255,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(6*view.scale,0);
+    ctx.lineTo(-4*view.scale,-4*view.scale);
+    ctx.lineTo(-4*view.scale,4*view.scale);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  });
 
-        let rainValues = {
-            serra: 0,
-            jacui: 0,
-            metrop: 0
-        };
+  // partículas em trânsito
+  particles.forEach(p=>{
+    const edge = EDGES[p.edgeIdx];
+    const a = toScreen(NODES[edge.from].x, NODES[edge.from].y);
+    const b = toScreen(NODES[edge.to].x, NODES[edge.to].y);
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 + 30*view.scale;
+    const t=p.progress;
+    const px = (1-t)*(1-t)*a.x + 2*(1-t)*t*mx + t*t*b.x;
+    const py = (1-t)*(1-t)*a.y + 2*(1-t)*t*my + t*t*b.y;
+    ctx.beginPath();
+    ctx.arc(px,py, Math.max(3,4*view.scale),0,Math.PI*2);
+    ctx.fillStyle='#3aa0ff';
+    ctx.shadowColor='#3aa0ff';
+    ctx.shadowBlur=8;
+    ctx.fill();
+    ctx.shadowBlur=0;
+  });
 
-        let particles = [];
-        let isRunning = false;
-        let selectedNode = nodes[1];
+  // nós
+  Object.values(NODES).forEach(n=>{
+    const p = toScreen(n.x,n.y);
+    const r = Math.max(14, 20*view.scale);
+    const col = nodeColor(n);
+    const isSel = selectedNode===n.id;
+    const isHov = hoverNode===n.id;
 
-        function resizeCanvas() {
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-        calculateHydroDynamics();
-        updateInfoPanel(selectedNode);
+    if(isSel || isHov){
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,r+8,0,Math.PI*2);
+      ctx.strokeStyle = isSel ? '#ffffff' : 'rgba(255,255,255,.4)';
+      ctx.lineWidth=2;
+      ctx.stroke();
+    }
 
-        canvas.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            startX = e.clientX - offsetX;
-            startY = e.clientY - offsetY;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    ctx.fillStyle=col;
+    ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.8)';
+    ctx.lineWidth=2;
+    ctx.stroke();
+
+    ctx.fillStyle='#fff';
+    ctx.font = `bold ${Math.max(9,10*view.scale)}px sans-serif`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(n.name.split(' ')[0].slice(0,8).toUpperCase(), p.x, p.y);
+
+    ctx.fillStyle='#e6edf7';
+    ctx.font = `${Math.max(9,10*view.scale)}px sans-serif`;
+    ctx.fillText(n.cota.toFixed(2)+'m', p.x, p.y+r+14);
+  });
+
+  // rótulo N/S
+  ctx.fillStyle='rgba(230,237,247,.4)';
+  ctx.font='11px sans-serif';
+  ctx.textAlign='left';
+  ctx.fillText('↑ Cabeceiras / Serra', 16, 24);
+  ctx.fillText('↓ Oceano Atlântico', 16, h-16);
+}
+
+function hitTest(mx,my){
+  let found=null;
+  Object.values(NODES).forEach(n=>{
+    const p = toScreen(n.x,n.y);
+    const r = Math.max(14,20*view.scale);
+    if(Math.hypot(mx-p.x,my-p.y) <= r+6) found=n.id;
+  });
+  return found;
+}
+
+canvas.addEventListener('mousedown', e=>{
+  const rect=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*devicePixelRatio, my=(e.clientY-rect.top)*devicePixelRatio;
+  const hit = hitTest(mx,my);
+  if(hit){
+    selectedNode = hit;
+    activeTab='explore';
+    setActiveTabUI('explore');
+    renderPanel();
+    drawMap();
+    return;
+  }
+  dragging=true;
+  canvas.classList.add('dragging');
+  dragStart={x:e.clientX,y:e.clientY};
+  dragOff0={x:view.offX,y:view.offY};
+});
+window.addEventListener('mousemove', e=>{
+  if(dragging){
+    view.offX = dragOff0.x + (e.clientX-dragStart.x)*devicePixelRatio;
+    view.offY = dragOff0.y + (e.clientY-dragStart.y)*devicePixelRatio;
+    drawMap();
+  } else {
+    const rect=canvas.getBoundingClientRect();
+    const mx=(e.clientX-rect.left)*devicePixelRatio, my=(e.clientY-rect.top)*devicePixelRatio;
+    const hit = hitTest(mx,my);
+    if(hit!==hoverNode){ hoverNode=hit; canvas.style.cursor = hit?'pointer':'grab'; drawMap(); }
+  }
+});
+window.addEventListener('mouseup', ()=>{ dragging=false; canvas.classList.remove('dragging'); });
+canvas.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const delta = e.deltaY<0 ? 1.1 : 0.9;
+  view.scale = Math.min(3, Math.max(0.5, view.scale*delta));
+  drawMap();
+}, {passive:false});
+
+document.getElementById('zoomIn').onclick=()=>{ view.scale=Math.min(3,view.scale*1.15); drawMap(); };
+document.getElementById('zoomOut').onclick=()=>{ view.scale=Math.max(0.5,view.scale*0.87); drawMap(); };
+document.getElementById('zoomReset').onclick=()=>{ view={scale:1,offX:0,offY:0}; drawMap(); };
+
+/* ---------- SUPORTE A TOQUE (celular/tablet) ---------- */
+let touchStartPos=null, touchMoved=false, lastPinchDist=null;
+
+function getTouchPointCanvas(t){
+  const rect=canvas.getBoundingClientRect();
+  return { x:(t.clientX-rect.left)*devicePixelRatio, y:(t.clientY-rect.top)*devicePixelRatio };
+}
+function pinchDistance(touches){
+  const dx=touches[0].clientX-touches[1].clientX;
+  const dy=touches[0].clientY-touches[1].clientY;
+  return Math.hypot(dx,dy);
+}
+
+canvas.addEventListener('touchstart', e=>{
+  if(e.touches.length===2){
+    lastPinchDist = pinchDistance(e.touches);
+    return;
+  }
+  const t = e.touches[0];
+  touchStartPos = {x:t.clientX, y:t.clientY};
+  touchMoved = false;
+  dragOff0={x:view.offX,y:view.offY};
+  dragStart={x:t.clientX,y:t.clientY};
+}, {passive:true});
+
+canvas.addEventListener('touchmove', e=>{
+  e.preventDefault(); // impede a página de rolar enquanto mexe no mapa
+
+  if(e.touches.length===2 && lastPinchDist!=null){
+    const dist = pinchDistance(e.touches);
+    const delta = dist/lastPinchDist;
+    view.scale = Math.min(3, Math.max(0.5, view.scale*delta));
+    lastPinchDist = dist;
+    drawMap();
+    return;
+  }
+
+  const t = e.touches[0];
+  if(!touchStartPos) return;
+  const moveDist = Math.hypot(t.clientX-touchStartPos.x, t.clientY-touchStartPos.y);
+  if(moveDist>6) touchMoved = true;
+
+  view.offX = dragOff0.x + (t.clientX-dragStart.x)*devicePixelRatio;
+  view.offY = dragOff0.y + (t.clientY-dragStart.y)*devicePixelRatio;
+  drawMap();
+}, {passive:false});
+
+canvas.addEventListener('touchend', e=>{
+  lastPinchDist=null;
+  if(!touchMoved && touchStartPos){
+    // trata como toque/clique num nó
+    const rect=canvas.getBoundingClientRect();
+    const mx=(touchStartPos.x-rect.left)*devicePixelRatio, my=(touchStartPos.y-rect.top)*devicePixelRatio;
+    const hit = hitTest(mx,my);
+    if(hit){
+      selectedNode = hit;
+      activeTab='explore';
+      setActiveTabUI('explore');
+      renderPanel();
+      drawMap();
+    }
+  }
+  touchStartPos=null;
+  touchMoved=false;
+}, {passive:true});
+
+/* =========================================================
+   SIMULAÇÃO EM CASCATA
+========================================================= */
+let particles = []; // {edgeIdx, progress, volume}
+let simRunning=false;
+let simSpeed=6; // horas simuladas por segundo real
+let simClock=0; // horas
+let simInterval=null;
+let eventLog=[];
+const notified = {}; // controla alertas já logados por nó
+
+function logEvent(msg, level='info'){
+  const dia = Math.floor(simClock/24), hora = Math.floor(simClock%24);
+  eventLog.unshift({msg:`[D${dia} ${String(hora).padStart(2,'0')}h] ${msg}`, level});
+  if(eventLog.length>60) eventLog.pop();
+  if(activeTab==='sim') renderLog();
+}
+
+function startSim(){
+  if(simRunning) return;
+  simRunning=true;
+  logEvent('Simulação iniciada.', 'info');
+  simInterval = setInterval(tick, 100);
+  updateClockUI();
+}
+function pauseSim(){
+  simRunning=false;
+  clearInterval(simInterval);
+  updateClockUI();
+}
+function resetSim(){
+  pauseSim();
+  simClock=0;
+  particles=[];
+  eventLog=[];
+  Object.values(NODES).forEach(n=>{
+    n.cota = NODE_BASE[n.id];
+    n.rain = 0;
+    notified[n.id]=false;
+  });
+  updateClockUI();
+  drawMap();
+  if(activeTab==='sim'){ renderPanel(); }
+}
+
+function tick(){
+  const dt = simSpeed * (100/1000); // horas por tick de 100ms
+  simClock += dt;
+
+  // fontes com chuva ativa: sobe a cota local e gera partículas
+  Object.values(NODES).forEach(n=>{
+    if(n.isSource && n.rain>0){
+      n.cota = Math.min(n.max*1.15, n.cota + (n.rain/100)*0.06*dt);
+      n.spawnAcc = (n.spawnAcc||0) + dt;
+      const interval = Math.max(0.4, 2 - n.rain/60);
+      if(n.spawnAcc >= interval){
+        n.spawnAcc = 0;
+        EDGES.forEach((e, idx)=>{
+          if(e.from===n.id){
+            particles.push({edgeIdx:idx, progress:0, volume:n.rain/100});
+          }
         });
-        canvas.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            offsetX = e.clientX - startX;
-            offsetY = e.clientY - startY;
-        });
-        canvas.addEventListener('mouseup', () => isDragging = false);
-        canvas.addEventListener('mouseleave', () => isDragging = false);
+      }
+    }
+  });
 
-        canvas.addEventListener('click', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = (e.clientX - rect.left - offsetX) / scale;
-            const mouseY = (e.clientY - rect.top - offsetY) / scale;
+  // mover partículas
+  for(let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    const edge = EDGES[p.edgeIdx];
+    p.progress += dt/edge.hours;
+    if(p.progress>=1){
+      const target = NODES[edge.to];
+      const bump = p.volume * edge.factor * 0.9;
+      target.cota = Math.min(target.max*1.15, target.cota + bump);
+      particles.splice(i,1);
 
-            nodes.forEach(node => {
-                let coords = getNodeCoordinates(node.id, canvas.width, canvas.height);
-                const dist = Math.hypot(mouseX - coords.x, mouseY - coords.y);
-                if (dist < 40) {
-                    selectedNode = node;
-                    updateInfoPanel(node);
-                }
-            });
-        });
-
-        function getNodeCoordinates(id, w, h) {
-            switch(id) {
-                case 'noroeste': return { x: w * 0.15, y: h * 0.30 };
-                case 'serra': return { x: w * 0.38, y: h * 0.45 };
-                case 'metrop': return { x: w * 0.60, y: h * 0.55 };
-                case 'guaiba': return { x: w * 0.78, y: h * 0.40 };
-                case 'lagoon': return { x: w * 0.88, y: h * 0.70 };
-                default: return { x: w * 0.5, y: h * 0.5 };
-            }
+      // dispara novas partículas a jusante se o nó também tiver saída (efeito cascata natural)
+      EDGES.forEach((e2, idx2)=>{
+        if(e2.from===target.id){
+          particles.push({edgeIdx:idx2, progress:0, volume:bump*0.6});
         }
+      });
+    }
+  }
 
-        function zoomIn() { scale = Math.min(scale * 1.2, 3); }
-        function zoomOut() { scale = Math.max(scale / 1.2, 0.7); }
-        function resetZoom() { scale = 1; offsetX = 0; offsetY = 0; }
+  // leve decaimento natural (escoamento) quando não há chuva alimentando
+  Object.values(NODES).forEach(n=>{
+    const base = NODE_BASE[n.id];
+    if(n.cota>base){
+      n.cota -= (n.cota-base) * 0.002 * dt;
+    }
+    checkAlert(n);
+  });
 
-        function togglePlay() {
-            isRunning = !isRunning;
-            const btn = document.getElementById('play-btn');
-            const icon = document.getElementById('play-icon');
-            const text = document.getElementById('play-text');
-            const dot = document.getElementById('sim-status-dot');
+  drawMap();
+  updateClockUI();
+  if(activeTab==='sim') renderStatusList();
+  if(activeTab==='explore' && selectedNode) renderPanel();
+}
 
-            if (isRunning) {
-                btn.className = 'px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2';
-                icon.className = 'fa-solid fa-pause';
-                text.textContent = 'Pausar Fluxo';
-                dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
-            } else {
-                btn.className = 'px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2';
-                icon.className = 'fa-solid fa-play';
-                text.textContent = 'Iniciar Fluxo';
-                dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
-            }
-        }
+function checkAlert(n){
+  const pct = n.cota/n.max;
+  const key = n.id;
+  if(pct>=1 && notified[key]!=='critical'){
+    notified[key]='critical';
+    logEvent(`⚠ ${n.name} ultrapassou a cota crítica (${n.cota.toFixed(2)}m).`, 'critical');
+  } else if(pct>=0.6 && pct<1 && notified[key]!=='alert' && notified[key]!=='critical'){
+    notified[key]='alert';
+    logEvent(`${n.name} entrou em nível de alerta (${n.cota.toFixed(2)}m).`, 'alert');
+  } else if(pct<0.6){
+    notified[key]=false;
+  }
+}
 
-        function resetSim() {
-            isRunning = false;
-            particles = [];
-            document.getElementById('play-btn').className = 'px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2';
-            document.getElementById('play-icon').className = 'fa-solid fa-play';
-            document.getElementById('play-text').textContent = 'Iniciar Fluxo';
-            document.getElementById('sim-status-dot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
-            calculateHydroDynamics();
-            updateActiveAlerts();
-            if (selectedNode) updateInfoPanel(selectedNode);
-        }
+function updateClockUI(){
+  const dia = Math.floor(simClock/24), hora = Math.floor(simClock%24);
+  document.getElementById('clockDisplay').textContent =
+    `Dia ${dia} · ${String(hora).padStart(2,'0')}h · ${simRunning?'rodando':'pausado'}`;
+}
 
-        function updateRain(region, val) {
-            val = parseInt(val);
-            rainValues[region] = val;
-            document.getElementById(`val-${region}`).textContent = `${val} mm`;
-            document.getElementById('scenario-select').value = 'custom';
-            calculateHydroDynamics();
-            updateActiveAlerts();
-            if (selectedNode) updateInfoPanel(selectedNode);
-        }
+/* =========================================================
+   ABAS / PAINEL LATERAL
+========================================================= */
+let activeTab='sim';
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    activeTab = btn.dataset.tab;
+    setActiveTabUI(activeTab);
+    renderPanel();
+    salvarPreferencias();
+  });
+});
+function setActiveTabUI(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+}
 
-        function updateWind(val) {
-            windSpeed = parseInt(val);
-            document.getElementById('val-wind').textContent = `${windSpeed} km/h`;
-            calculateHydroDynamics();
-            updateActiveAlerts();
-            if (selectedNode) updateInfoPanel(selectedNode);
-        }
+function renderPanel(){
+  const el = document.getElementById('sidePanel');
+  if(activeTab==='sim') return renderSimTab(el);
+  if(activeTab==='hist') return renderHistTab(el);
+  if(activeTab==='explore') return renderExploreTab(el);
+  if(activeTab==='live') return renderLiveTab(el);
+}
 
-        function changeScenario(scenario) {
-            if (scenario === '2024') {
-                rainValues.serra = 650;
-                rainValues.jacui = 480;
-                rainValues.metrop = 520;
-                windSpeed = 65;
-            } else if (scenario === 'moderate') {
-                rainValues.serra = 120;
-                rainValues.jacui = 80;
-                rainValues.metrop = 90;
-                windSpeed = 20;
-            } else {
-                rainValues.serra = 0;
-                rainValues.jacui = 0;
-                rainValues.metrop = 0;
-                windSpeed = 10;
-            }
+/* ---------- ABA SIMULADOR ---------- */
+function renderSimTab(el){
+  const sources = Object.values(NODES).filter(n=>n.isSource);
+  el.innerHTML = `
+    <div class="card">
+      <h3>Controles da Simulação</h3>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-primary" id="btnPlay">${simRunning?'⏸ Pausar':'▶ Rodar'}</button>
+        <button class="btn btn-outline" id="btnReset">↻ Reset</button>
+      </div>
+      <label class="field">Velocidade (${simSpeed}h simuladas / seg)</label>
+      <input type="range" id="speedSlider" min="1" max="24" step="1" value="${simSpeed}">
+    </div>
 
-            document.getElementById('range-serra').value = rainValues.serra;
-            document.getElementById('range-jacui').value = rainValues.jacui;
-            document.getElementById('range-metrop').value = rainValues.metrop;
-            document.getElementById('range-wind').value = windSpeed;
+    <div class="card">
+      <h3>Chuva por Região (fontes)</h3>
+      <div class="rain-grid" id="rainGrid"></div>
+      <p style="margin-top:10px;">Ajuste a intensidade e clique em "Rodar". A água se propaga entre os nós respeitando o tempo de viagem de cada trecho — assista a cascata acontecer no mapa.</p>
+      <button class="btn btn-outline" id="btnPreset2024">⚡ Carregar cenário Maio/2024</button>
+    </div>
 
-            document.getElementById('val-serra').textContent = `${rainValues.serra} mm`;
-            document.getElementById('val-jacui').textContent = `${rainValues.jacui} mm`;
-            document.getElementById('val-metrop').textContent = `${rainValues.metrop} mm`;
-            document.getElementById('val-wind').textContent = `${windSpeed} km/h`;
+    <div class="card">
+      <h3>Status Atual dos Nós <span class="src-badge ${liveState.active ? 'src-live' : 'src-sim'}">${liveState.active ? '🛰️ chuva real aplicada' : '🎲 simulado'}</span></h3>
+      <div id="statusList"></div>
+      <button class="btn btn-outline" id="btnCopyResumo">📋 Copiar resumo</button>
+    </div>
 
-            calculateHydroDynamics();
-            updateActiveAlerts();
-            if (selectedNode) updateInfoPanel(selectedNode);
-        }
+    <div class="card">
+      <h3>Registro de Eventos</h3>
+      <div class="log" id="logBox"></div>
+    </div>
+  `;
 
-        function calculateHydroDynamics() {
-            nodes.forEach(node => {
-                let currentRain = rainValues[node.rainRef];
-                
-                if (currentRain < 80 && (node.id !== 'lagoon' || windSpeed < 45)) {
-                    node.calculatedFloodTime = 'Sem risco';
-                    node.status = 'Seguro';
-                    node.color = '#10b981';
-                    node.action = node.actionNormal;
-                } else {
-                    let floodHours = Math.max(1, (16 / ((currentRain + (node.id === 'lagoon' ? windSpeed * 0.8 : 0)) / 100)));
-                    node.calculatedFloodTime = `${floodHours.toFixed(1)}h`;
-                    node.action = node.actionCrisis;
-                    
-                    if (currentRain >= 250 || (node.id === 'lagoon' && windSpeed >= 50)) {
-                        node.status = 'Inundação Crítica';
-                        node.color = '#e11d48';
-                    } else {
-                        node.status = 'Alerta de Cheia';
-                        node.color = '#f59e0b';
-                    }
-                }
-            });
-        }
+  const rainGrid = document.getElementById('rainGrid');
+  sources.forEach(n=>{
+    const div = document.createElement('div');
+    div.className='rain-item';
+    div.innerHTML = `
+      <div class="name">${n.name}</div>
+      <input type="range" min="0" max="100" value="${n.rain}" data-node="${n.id}" class="rainSlider">
+      <div class="value"><span class="rv-${n.id}">${n.rain}</span> mm/h</div>
+    `;
+    rainGrid.appendChild(div);
+  });
+  document.querySelectorAll('.rainSlider').forEach(s=>{
+    s.addEventListener('input', e=>{
+      const id = e.target.dataset.node;
+      NODES[id].rain = parseInt(e.target.value);
+      document.querySelector(`.rv-${id}`).textContent = e.target.value;
+      salvarPreferencias();
+    });
+  });
 
-        function updateInfoPanel(node) {
-            document.getElementById('info-node-cities').textContent = node.cities;
-            document.getElementById('info-node-method').textContent = node.method;
-            document.getElementById('info-node-dynamics').textContent = node.dynamics;
-            
-            let currentRain = rainValues[node.rainRef];
-            if (currentRain < 80 && (node.id !== 'lagoon' || windSpeed < 45)) {
-                document.getElementById('info-node-flood').textContent = `Seguro (Sem Risco)`;
-            } else {
-                document.getElementById('info-node-flood').textContent = `Impacto em ~${node.calculatedFloodTime}`;
-            }
+  document.getElementById('btnPlay').onclick = ()=>{
+    simRunning ? pauseSim() : startSim();
+    renderSimTab(el);
+  };
+  document.getElementById('btnReset').onclick = resetSim;
+  document.getElementById('speedSlider').oninput = e=>{ simSpeed=parseInt(e.target.value); renderSimTab(el); };
+  document.getElementById('btnPreset2024').onclick = ()=>{
+    NODES.serra.rain=90; NODES.jacui.rain=70; NODES.sinos.rain=65;
+    logEvent('Cenário Maio/2024 carregado: chuva extrema em todas as regiões-fonte.', 'alert');
+    if(!simRunning) startSim();
+    renderSimTab(el);
+  };
+  document.getElementById('btnCopyResumo').onclick = ()=>{
+    const texto = gerarResumoTexto();
+    navigator.clipboard.writeText(texto).then(()=>{
+      const btn = document.getElementById('btnCopyResumo');
+      const original = btn.textContent;
+      btn.textContent = '✅ Copiado!';
+      setTimeout(()=>{ btn.textContent = original; }, 1800);
+    }).catch(()=>{
+      alert(texto); // fallback caso o navegador bloqueie clipboard
+    });
+  };
 
-            document.getElementById('info-node-action').textContent = node.action;
+  renderStatusList();
+  renderLog();
+}
 
-            let peakCota = currentRain < 80 ? 0.30 : (node.maxCota * ((currentRain + (node.id === 'lagoon' ? windSpeed * 0.5 : 0)) / 300)).toFixed(2);
-            document.getElementById('chart-peak-val').textContent = `${peakCota} m`;
+function gerarResumoTexto(){
+  const agora = new Date().toLocaleString('pt-BR');
+  const linhas = [`📊 STATUS FLUXO DE ÁGUAS RS — ${agora}`, `Fonte: ${liveState.active ? 'chuva real (Open-Meteo)' : 'simulação manual'}`, ''];
+  Object.values(NODES).forEach(n=>{
+    const pct = (n.cota/n.max)*100;
+    const status = pct>=100?'🔴 CRÍTICO':pct>=60?'🟡 ALERTA':'🟢 NORMAL';
+    linhas.push(`${n.name}: ${n.cota.toFixed(2)}m (${pct.toFixed(0)}%) — ${status}`);
+  });
+  linhas.push('', 'Gerado pela Plataforma Interativa de Fluxo de Águas RS');
+  return linhas.join('\n');
+}
 
-            let h1 = (peakCota * 0.35).toFixed(2);
-            let h2 = (peakCota * 0.65).toFixed(2);
-            let h3 = (peakCota * 0.85).toFixed(2);
-            let h4 = peakCota;
+function renderStatusList(){
+  const box = document.getElementById('statusList');
+  if(!box) return;
+  box.innerHTML = Object.values(NODES).map(n=>{
+    const pct = Math.min(100, (n.cota/n.max)*100);
+    const cls = pct>=100?'b-danger':pct>=60?'b-warn':'b-ok';
+    const barCol = pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71';
+    return `
+      <div class="stat-row">
+        <span class="label">${n.name}</span>
+        <span class="val">${n.cota.toFixed(2)}m</span>
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${barCol}"></div></div>
+    `;
+  }).join('');
+}
 
-            document.getElementById('val-bar1').textContent = `${h1}m`;
-            document.getElementById('val-bar2').textContent = `${h2}m`;
-            document.getElementById('val-bar3').textContent = `${h3}m`;
-            document.getElementById('val-bar4').textContent = `${h4}m`;
+function renderLog(){
+  const box = document.getElementById('logBox');
+  if(!box) return;
+  box.innerHTML = eventLog.length ? eventLog.map(l=>`<div class="${l.level}">${l.msg}</div>`).join('')
+    : '<div>Nenhum evento ainda. Ajuste a chuva e clique em Rodar.</div>';
+}
 
-            document.getElementById('bar-h1').style.height = `${Math.min(Math.max((h1/8)*100, 10), 100)}%`;
-            document.getElementById('bar-h2').style.height = `${Math.min(Math.max((h2/8)*100, 10), 100)}%`;
-            document.getElementById('bar-h3').style.height = `${Math.min(Math.max((h3/8)*100, 10), 100)}%`;
-            document.getElementById('bar-h4').style.height = `${Math.min(Math.max((h4/8)*100, 10), 100)}%`;
-        }
+/* ---------- ABA LINHA DO TEMPO ---------- */
+let tlDay = 0;
+let tlPlaying=false, tlInterval=null;
 
-        function updateActiveAlerts() {
-            const container = document.getElementById('active-alerts-container');
-            let criticalNodes = nodes.filter(n => n.status === 'Inundação Crítica' || n.status === 'Alerta de Cheia');
+function renderHistTab(el){
+  el.innerHTML = `
+    <div class="card">
+      <h3>Linha do Tempo — Abril/Maio 2024</h3>
+      <p style="margin-bottom:10px;">Modelo educativo construído a partir dos relatos públicos do evento. O ponto de referência real é o recorde do Guaíba: <strong>4,77m em 03/mai/2024</strong>, superando a marca de 1941 (4,76m). As demais curvas são estimativas ilustrativas do formato de subida/descida.</p>
+      <div class="timeline-wrap">
+        <div class="timeline-date" id="tlDate"></div>
+        <input type="range" id="tlSlider" min="0" max="${HIST_DAYS-1}" value="${tlDay}">
+        <div class="tl-controls">
+          <button id="tlPlay">${tlPlaying?'⏸':'▶'}</button>
+          <button id="tlBack">⏮</button>
+          <button id="tlFwd">⏭</button>
+        </div>
+      </div>
+    </div>
 
-            if (criticalNodes.length === 0) {
-                container.innerHTML = `
-                    <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-emerald-400 text-center font-medium">
-                        ✓ Nenhuma cidade sob alerta com os volumes atuais.
-                    </div>
-                `;
-                return;
-            }
+    <div class="card">
+      <h3>Situação em ${histDateLabel(tlDay)}</h3>
+      <div id="tlStatusList"></div>
+    </div>
 
-            container.innerHTML = criticalNodes.map(n => `
-                <div class="p-3 rounded-xl bg-slate-950 border ${n.status === 'Inundação Crítica' ? 'border-rose-600/50 bg-rose-950/20' : 'border-amber-600/50 bg-amber-950/20'} space-y-1">
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold text-white text-xs">${n.name}</span>
-                        <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${n.status === 'Inundação Crítica' ? 'bg-rose-600 text-white' : 'bg-amber-500 text-slate-950'}">${n.status}</span>
-                    </div>
-                    <p class="text-[11px] text-slate-300"><strong>Cidades:</strong> ${n.cities}</p>
-                    <p class="text-[10px] text-rose-300 font-medium"><strong>Tempo estimado:</strong> ~${n.calculatedFloodTime}</p>
-                </div>
-            `).join('');
-        }
+    <div class="card">
+      <h3>Destaque do Dia</h3>
+      <p id="tlHighlight"></p>
+    </div>
+  `;
 
-        function updateSimulation() {
-            waveOffset += 0.035;
-            if (!isRunning) return;
+  applyTimelineDay(tlDay);
 
-            let intensityFactor = Math.max(1, (rainValues.serra + rainValues.jacui + rainValues.metrop) / 100);
+  document.getElementById('tlSlider').oninput = e=>{
+    tlDay = parseInt(e.target.value);
+    applyTimelineDay(tlDay);
+  };
+  document.getElementById('tlBack').onclick = ()=>{ tlDay=Math.max(0,tlDay-1); document.getElementById('tlSlider').value=tlDay; applyTimelineDay(tlDay); };
+  document.getElementById('tlFwd').onclick = ()=>{ tlDay=Math.min(HIST_DAYS-1,tlDay+1); document.getElementById('tlSlider').value=tlDay; applyTimelineDay(tlDay); };
+  document.getElementById('tlPlay').onclick = ()=>{
+    tlPlaying = !tlPlaying;
+    document.getElementById('tlPlay').textContent = tlPlaying?'⏸':'▶';
+    if(tlPlaying){
+      tlInterval = setInterval(()=>{
+        tlDay++;
+        if(tlDay>=HIST_DAYS){ tlDay=0; }
+        document.getElementById('tlSlider').value=tlDay;
+        applyTimelineDay(tlDay);
+      }, 500);
+    } else {
+      clearInterval(tlInterval);
+    }
+  };
+}
 
-            if (Math.random() < 0.5) {
-                const conn = connections[Math.floor(Math.random() * connections.length)];
-                particles.push({
-                    x: conn.from, targetX: conn.to,
-                    progress: 0, speed: (0.005 + Math.random() * 0.003) * Math.min(intensityFactor, 1.5)
-                });
-            }
+function applyTimelineDay(day){
+  Object.values(NODES).forEach(n=>{ n.cota = histCota(n.id, day); });
+  drawMap();
+  const dateEl = document.getElementById('tlDate');
+  if(dateEl) dateEl.textContent = histDateLabel(day) + ' de 2024';
+  const listEl = document.getElementById('tlStatusList');
+  if(listEl){
+    listEl.innerHTML = Object.values(NODES).map(n=>{
+      const pct = Math.min(100,(n.cota/n.max)*100);
+      const barCol = pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71';
+      return `
+        <div class="stat-row">
+          <span class="label">${n.name}</span>
+          <span class="val">${n.cota.toFixed(2)}m</span>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${barCol}"></div></div>
+      `;
+    }).join('');
+  }
+  // destaque: nó mais próximo do pico nesse dia
+  let closest=null, closestDist=Infinity;
+  Object.values(NODES).forEach(n=>{
+    const d = Math.abs(day - n.hist2024.peakDay);
+    if(d<closestDist){ closestDist=d; closest=n; }
+  });
+  const hEl = document.getElementById('tlHighlight');
+  if(hEl && closest) hEl.textContent = `${closest.name}: ${closest.hist2024.label}`;
+}
 
-            particles.forEach(p => p.progress += p.speed);
-            particles = particles.filter(p => p.progress <= 1);
-        }
+/* ---------- ABA EXPLORAR NÓ ---------- */
+function renderExploreTab(el){
+  if(!selectedNode){
+    el.innerHTML = `
+      <div class="card">
+        <div class="empty-state">
+          <div class="icon">🖱️</div>
+          Clique em um ponto do mapa para ver detalhes, histórico e configurar a chuva local deste trecho.
+        </div>
+      </div>
+    `;
+    return;
+  }
+  const n = NODES[selectedNode];
+  const pct = Math.min(100,(n.cota/n.max)*100);
+  const status = pct>=100?['CRÍTICO','b-danger']:pct>=60?['ALERTA','b-warn']:['NORMAL','b-ok'];
 
-        function drawMap() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+  el.innerHTML = `
+    <div class="card">
+      <div class="node-title">${n.name}</div>
+      <div class="node-sub">${n.sub}</div>
+      <span class="badge ${status[1]}">${status[0]}</span>
 
-            ctx.save();
-            ctx.translate(offsetX, offsetY);
-            ctx.scale(scale, scale);
+      <div style="margin-top:12px;">
+        <div class="stat-row"><span class="label">Cota atual</span><span class="val">${n.cota.toFixed(2)} m</span></div>
+        <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71'}"></div></div>
+        <div class="stat-row" style="margin-top:8px;"><span class="label">Cota crítica de referência</span><span class="val">${n.max.toFixed(2)} m</span></div>
+        <div class="stat-row"><span class="label">Vazão estimada</span><span class="val">${n.vazao} m³/s</span></div>
+      </div>
+    </div>
 
-            // Desenhar os rios
-            connections.forEach((conn, index) => {
-                const fromCoords = getNodeCoordinates(conn.from, canvas.width, canvas.height);
-                const toCoords = getNodeCoordinates(conn.to, canvas.width, canvas.height);
+    <div class="card">
+      <h3>Sobre este ponto</h3>
+      <p>${n.desc}</p>
+    </div>
 
-                let avgRain = (rainValues.serra + rainValues.jacui + rainValues.metrop) / 3;
-                let riverWidth = Math.min(10 + (avgRain / 30), 28);
+    <div class="card">
+      <h3>Registro histórico — 2024</h3>
+      <p><strong>${n.hist2024.label}</strong></p>
+      <canvas class="spark" id="sparkCanvas"></canvas>
+    </div>
 
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = riverWidth + 8;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(fromCoords.x, fromCoords.y);
-                ctx.quadraticCurveTo((fromCoords.x + toCoords.x) / 2, (fromCoords.y + toCoords.y) / 2 + 30, toCoords.x, toCoords.y);
-                ctx.stroke();
+    ${n.isSource ? `
+    <div class="card">
+      <h3>Chuva local neste trecho</h3>
+      <label class="field">Intensidade (mm/h)</label>
+      <input type="range" id="localRain" min="0" max="100" value="${n.rain}">
+      <div class="stat-row"><span class="label">Atual</span><span class="val" id="localRainVal">${n.rain} mm/h</span></div>
+      <button class="btn btn-primary" id="btnStartLocalSim">${simRunning?'Simulação já rodando':'▶ Iniciar simulação com esta chuva'}</button>
+    </div>` : ''}
 
-                let riverGrad = ctx.createLinearGradient(fromCoords.x, fromCoords.y, toCoords.x, toCoords.y);
-                riverGrad.addColorStop(0, '#38bdf8');
-                riverGrad.addColorStop(0.5, '#0284c7');
-                riverGrad.addColorStop(1, '#0284c7');
+    <button class="btn btn-outline" id="btnCloseNode">← Voltar</button>
+  `;
 
-                ctx.strokeStyle = riverGrad;
-                ctx.lineWidth = riverWidth;
-                ctx.setLineDash([18, 10]);
-                ctx.lineDashOffset = -waveOffset * 18;
-                ctx.beginPath();
-                ctx.moveTo(fromCoords.x, fromCoords.y);
-                ctx.quadraticCurveTo((fromCoords.x + toCoords.x) / 2, (fromCoords.y + toCoords.y) / 2 + 30, toCoords.x, toCoords.y);
-                ctx.stroke();
-                ctx.setLineDash([]);
+  drawSparkline(n);
 
-                // Ícones e marcações de Pontes Estratégicas mapeadas entre as estações
-                let midX = (fromCoords.x + toCoords.x) / 2;
-                let midY = (fromCoords.y + toCoords.y) / 2 + 15;
+  if(n.isSource){
+    document.getElementById('localRain').oninput = e=>{
+      n.rain = parseInt(e.target.value);
+      document.getElementById('localRainVal').textContent = n.rain+' mm/h';
+    };
+    document.getElementById('btnStartLocalSim').onclick = ()=>{
+      if(!simRunning) startSim();
+    };
+  }
+  document.getElementById('btnCloseNode').onclick = ()=>{
+    selectedNode=null;
+    renderExploreTab(el);
+    drawMap();
+  };
+}
 
-                ctx.fillStyle = '#1e293b';
-                ctx.beginPath();
-                ctx.arc(midX, midY, 12, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#38bdf8';
-                ctx.stroke();
+function drawSparkline(n){
+  const c = document.getElementById('sparkCanvas');
+  if(!c) return;
+  c.width = c.clientWidth*devicePixelRatio;
+  c.height = c.clientHeight*devicePixelRatio;
+  const sctx = c.getContext('2d');
+  const pts = [];
+  for(let d=0; d<HIST_DAYS; d++) pts.push(histCota(n.id,d));
+  const max = Math.max(...pts)*1.1, min = Math.min(...pts)*0.9;
+  sctx.clearRect(0,0,c.width,c.height);
+  sctx.beginPath();
+  pts.forEach((v,i)=>{
+    const x = (i/(pts.length-1))*c.width;
+    const y = c.height - ((v-min)/(max-min))*c.height;
+    i===0?sctx.moveTo(x,y):sctx.lineTo(x,y);
+  });
+  sctx.strokeStyle='#3aa0ff';
+  sctx.lineWidth=2*devicePixelRatio;
+  sctx.stroke();
+  // linha do pico
+  const peakIdx = n.hist2024.peakDay;
+  const px = (peakIdx/(pts.length-1))*c.width;
+  sctx.strokeStyle='rgba(255,77,79,.6)';
+  sctx.setLineDash([4,4]);
+  sctx.beginPath();
+  sctx.moveTo(px,0); sctx.lineTo(px,c.height);
+  sctx.stroke();
+  sctx.setLineDash([]);
+}
 
-                ctx.fillStyle = '#38bdf8';
-                ctx.font = '10px "Font Awesome 6 Free", sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('🌉', midX, midY);
+/* =========================================================
+   DADOS REAIS — TEMPO REAL
+   Chuva: Open-Meteo (grátis, sem chave, CORS liberado — chamado
+   direto do navegador, sem precisar de proxy/backend).
+   Cota dos rios: ANA Telemetria1 WS (legado, sem token) —
+   este serviço está com data de desligamento anunciada pela
+   ANA (prorrogada para 30/06/2026, já vencida). Tentamos
+   consultar; se falhar, a plataforma continua funcionando
+   normalmente com a cota vinda da propagação simulada.
+========================================================= */
 
-                // Nome da Ponte / Travessia
-                ctx.textBaseline = 'alphabetic';
-                ctx.fillStyle = '#94a3b8';
-                ctx.font = '9px sans-serif';
-                ctx.fillText(conn.bridgeName, midX, midY + 22);
-            });
+const RAIN_STATIONS = {
+  serra: { lat:-29.17, lon:-51.53 },
+  jacui: { lat:-29.68, lon:-53.81 },
+  sinos: { lat:-29.76, lon:-51.15 },
+};
 
-            // Partículas de água
-            particles.forEach(p => {
-                const fromCoords = getNodeCoordinates(p.x, canvas.width, canvas.height);
-                const toCoords = getNodeCoordinates(p.targetX, canvas.width, canvas.height);
+let liveState = {
+  active:false,
+  intervalId:null,
+  lastFetch:null,
+  rainData:{},        // {nodeId: {mmAgora, mmProxHora, ts}}
+  anaStatus:'não testado', // 'ok' | 'indisponível' | 'não testado'
+  anaLastCheck:null,
+};
 
-                const currX = fromCoords.x + (toCoords.x - fromCoords.x) * p.progress;
-                const currY = fromCoords.y + (toCoords.y - fromCoords.y) * p.progress + Math.sin(p.progress * Math.PI * 4 + waveOffset) * 3;
+async function fetchChuvaReal(){
+  const ids = Object.keys(RAIN_STATIONS);
+  const lats = ids.map(id=>RAIN_STATIONS[id].lat).join(',');
+  const lons = ids.map(id=>RAIN_STATIONS[id].lon).join(',');
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=precipitation&forecast_days=2&timezone=America%2FSao_Paulo`;
 
-                ctx.fillStyle = '#bae6fd';
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#38bdf8';
-                ctx.beginPath();
-                ctx.arc(currX, currY, 5, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-            });
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error('Open-Meteo respondeu '+resp.status);
+  const json = await resp.json();
 
-            // Nós / Estações
-            nodes.forEach(node => {
-                const coords = getNodeCoordinates(node.id, canvas.width, canvas.height);
-                const x = coords.x;
-                const y = coords.y;
+  // Quando latitude/longitude têm múltiplos valores, a API retorna um array de resultados
+  const results = Array.isArray(json) ? json : [json];
 
-                if (node.status === 'Inundação Crítica' || node.status === 'Alerta de Cheia') {
-                    let pulseSize = 24 + Math.sin(waveOffset * 3) * 6;
-                    ctx.strokeStyle = node.status === 'Inundação Crítica' ? 'rgba(225, 29, 72, 0.7)' : 'rgba(245, 158, 11, 0.7)';
-                    ctx.lineWidth = 4;
-                    ctx.beginPath();
-                    ctx.arc(x, y, pulseSize, 0, Math.PI * 2);
-                    ctx.stroke();
-                }
+  results.forEach((r, idx)=>{
+    const id = ids[idx];
+    if(!r || !r.hourly) return;
+    const now = new Date();
+    const horaAtualStr = now.toISOString().slice(0,13); // yyyy-mm-ddThh
+    let iAtual = r.hourly.time.findIndex(t => t.startsWith(horaAtualStr));
+    if(iAtual === -1) iAtual = 0;
+    const mmAgora = r.hourly.precipitation[iAtual] ?? 0;
+    const mmProxHora = r.hourly.precipitation[iAtual+1] ?? mmAgora;
+    liveState.rainData[id] = { mmAgora, mmProxHora, ts:now };
+  });
 
-                ctx.fillStyle = node.color;
-                ctx.shadowBlur = 18;
-                ctx.shadowColor = node.color;
-                ctx.beginPath();
-                ctx.arc(x, y, 22, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
+  liveState.lastFetch = new Date();
+}
 
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = '#ffffff';
-                ctx.stroke();
+// Tenta a ANA legada. Formato de chamada testado e documentado pela própria ANA,
+// mas sujeito a estar fora do ar (ver aviso acima). Aqui é feita uma tentativa
+// direta; se o navegador bloquear por CORS ou o serviço estiver fora, cai no catch.
+async function testarANALegado(){
+  try {
+    // Endpoint de inventário, sem filtro de estação, apenas para checar se o serviço responde
+    const url = 'https://telemetriaws1.ana.gov.br/ServiceANA.asmx/HidroInventario?codEstDE=&codEstATE=&tpEst=&nmEst=&nmRio=&codSubBacia=&codBacia=&nmMunicipio=&nmEstado=Rio+Grande+do+Sul&sgResp=&sgOper=&telemetrica=1';
+    const resp = await fetch(url, { mode:'cors' });
+    liveState.anaStatus = resp.ok ? 'ok' : 'indisponível';
+  } catch(e){
+    // Muito provavelmente CORS (o serviço não foi feito pra ser chamado do navegador)
+    // ou o serviço já saiu do ar conforme aviso da ANA.
+    liveState.anaStatus = 'indisponível';
+  }
+  liveState.anaLastCheck = new Date();
+}
 
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '12px "Font Awesome 6 Free", sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('💧', x, y);
+function aplicarChuvaReal(){
+  Object.entries(liveState.rainData).forEach(([id, d])=>{
+    if(NODES[id]){
+      NODES[id].rain = Math.min(100, Math.round(d.mmAgora * 4)); // escala mm→intensidade do slider
+    }
+  });
+  if(activeTab==='sim') renderPanel();
+}
 
-                ctx.textBaseline = 'alphabetic';
-                ctx.fillStyle = '#f8fafc';
-                ctx.font = 'bold 11px sans-serif';
-                ctx.fillText(node.name, x, y + 38);
+async function ativarModoTempoReal(){
+  liveState.active = true;
+  updateLiveBadge();
+  await fetchChuvaReal();
+  aplicarChuvaReal();
+  await testarANALegado();
+  if(!simRunning) startSim();
+  logEvent('Modo Tempo Real ativado — chuva real (Open-Meteo) alimentando a simulação.', 'info');
 
-                ctx.fillStyle = node.status === 'Seguro' ? '#34d399' : '#f87171';
-                ctx.font = 'bold 10px monospace';
-                ctx.fillText(node.status, x, y - 30);
-            });
+  liveState.intervalId = setInterval(async ()=>{
+    try{
+      await fetchChuvaReal();
+      aplicarChuvaReal();
+      logEvent('Dados de chuva atualizados (Open-Meteo).', 'info');
+    }catch(e){
+      logEvent('Falha ao atualizar chuva real: '+e.message, 'alert');
+    }
+  }, 10*60*1000); // atualiza a cada 10 min
 
-            ctx.restore();
-        }
+  if(activeTab==='live') renderPanel();
+}
 
-        function loop() {
-            updateSimulation();
-            drawMap();
-            requestAnimationFrame(loop);
-        }
+function desativarModoTempoReal(){
+  liveState.active = false;
+  clearInterval(liveState.intervalId);
+  updateLiveBadge();
+  logEvent('Modo Tempo Real desativado.', 'info');
+  if(activeTab==='live') renderPanel();
+}
 
-        calculateHydroDynamics();
-        updateActiveAlerts();
-        requestAnimationFrame(loop);
-    </script>
+function renderLiveTab(el){
+  el.innerHTML = `
+    <div class="card">
+      <h3>Fontes de Dados Reais</h3>
+      <div class="stat-row"><span class="label">☔ Chuva — Open-Meteo</span><span class="badge b-ok">GRÁTIS · SEM CHAVE</span></div>
+      <p style="margin-top:4px;">Precipitação horária real e prevista, direto do navegador. Alimenta automaticamente a intensidade de chuva de cada região-fonte no simulador.</p>
+
+      <div class="stat-row" style="margin-top:14px;"><span class="label">🌊 Cota dos rios — ANA (legado)</span>
+        <span class="badge ${liveState.anaStatus==='ok'?'b-ok':liveState.anaStatus==='indisponível'?'b-danger':'b-warn'}">${liveState.anaStatus.toUpperCase()}</span>
+      </div>
+      <p style="margin-top:4px;">Este serviço da ANA está sem token, mas a própria ANA avisou desligamento (prorrogado até 30/06/2026 — já vencido). Pode estar indisponível. Enquanto isso, a cota exibida vem da propagação simulada a partir da chuva real.</p>
+      ${liveState.anaLastCheck ? `<div class="node-sub">Última verificação: ${liveState.anaLastCheck.toLocaleTimeString('pt-BR')}</div>` : ''}
+    </div>
+
+    <div class="card">
+      <h3>Controle</h3>
+      <button class="btn btn-primary" id="btnToggleLive">
+        ${liveState.active ? '⏸ Desativar Tempo Real' : '🛰️ Ativar Tempo Real'}
+      </button>
+      <p style="margin-top:8px;">${liveState.active ? 'Atualizando chuva real a cada 10 minutos e propagando no mapa.' : 'Ao ativar, a plataforma busca a chuva real agora e a cada 10 min, alimentando a cascata automaticamente.'}</p>
+      ${liveState.lastFetch ? `<div class="node-sub" style="margin-top:8px;">Última atualização: ${liveState.lastFetch.toLocaleTimeString('pt-BR')}</div>` : ''}
+    </div>
+
+    <div class="card">
+      <h3>Chuva Real Agora (mm/h)</h3>
+      <div id="liveRainList">
+        ${Object.keys(RAIN_STATIONS).map(id=>{
+          const d = liveState.rainData[id];
+          return `<div class="stat-row"><span class="label">${NODES[id].name}</span><span class="val">${d ? d.mmAgora.toFixed(1)+' mm' : '—'}</span></div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Caminho para dado oficial de cota (definitivo)</h3>
+      <p>Enviamos e-mail para <strong>hidro@ana.gov.br</strong> solicitando acesso ao Hidro_Webservice oficial. Quando aprovado, a função <code>api/ana-proxy.js</code> (já pronta, separada deste arquivo) substitui a cota simulada pela cota real medida nas estações.</p>
+    </div>
+  `;
+
+  document.getElementById('btnToggleLive').onclick = ()=>{
+    liveState.active ? desativarModoTempoReal() : ativarModoTempoReal();
+  };
+}
+
+function updateLiveBadge(){
+  const el = document.getElementById('liveBadge');
+  if(!el) return;
+  el.textContent = liveState.active ? '🛰️ Tempo Real Ativo' : '🎲 Modo Simulação';
+  el.className = 'live-badge' + (liveState.active ? ' on' : '');
+}
+
+/* Persistência simples — este arquivo roda como página standalone (Vercel),
+   fora do ambiente de artifacts do claude.ai, então localStorage funciona normalmente. */
+const STORAGE_KEY = 'rs-aguas-prefs-v1';
+
+function salvarPreferencias(){
+  try{
+    const prefs = {
+      activeTab,
+      rain: Object.fromEntries(Object.values(NODES).filter(n=>n.isSource).map(n=>[n.id, n.rain])),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  }catch(e){ /* localStorage pode estar bloqueado — sem problema, apenas não persiste */ }
+}
+
+function carregarPreferencias(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const prefs = JSON.parse(raw);
+    if(prefs.rain){
+      Object.entries(prefs.rain).forEach(([id, val])=>{
+        if(NODES[id]) NODES[id].rain = val;
+      });
+    }
+    if(prefs.activeTab) activeTab = prefs.activeTab;
+  }catch(e){ /* preferências corrompidas — ignora e segue com padrão */ }
+}
+
+/* =========================================================
+   INIT
+========================================================= */
+carregarPreferencias();
+resizeCanvas();
+setActiveTabUI(activeTab);
+renderPanel();
+updateClockUI();
+updateLiveBadge();
+window.addEventListener('beforeunload', salvarPreferencias);
+</script>
 </body>
 </html>
-
