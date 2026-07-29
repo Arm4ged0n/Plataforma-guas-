@@ -314,6 +314,40 @@ const EDGES = [
 
 const NODE_BASE = {}; // guarda cota inicial para reset
 Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
+Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; });
+
+// Regressão linear simples sobre o histórico recente -> metros/hora de tendência
+function calcularTendencia(node){
+  const h = node.history;
+  if(h.length < 3) return null;
+  const pts = h.slice(-20);
+  const t0 = pts[0].t;
+  const xs = pts.map(p=>(p.t-t0)/3600000); // horas desde o primeiro ponto da janela
+  const ys = pts.map(p=>p.cota);
+  const n = xs.length;
+  const sumX = xs.reduce((a,b)=>a+b,0);
+  const sumY = ys.reduce((a,b)=>a+b,0);
+  const sumXY = xs.reduce((s,x,i)=>s+x*ys[i],0);
+  const sumXX = xs.reduce((s,x)=>s+x*x,0);
+  const denom = n*sumXX - sumX*sumX;
+  if(Math.abs(denom) < 1e-9) return null;
+  return (n*sumXY - sumX*sumY)/denom; // m/h
+}
+
+// Projeta em quantas horas o nó atinge um nível-alvo, com base na tendência atual.
+// Retorna null se está estável/caindo (não faz sentido projetar).
+function projetarHorasAte(node, alvo){
+  const slope = calcularTendencia(node);
+  if(slope===null || slope<=0.001) return null;
+  if(node.cota >= alvo) return 0;
+  return (alvo - node.cota)/slope;
+}
+
+function formatarHoras(h){
+  if(h < 1) return `${Math.round(h*60)}min`;
+  if(h < 48) return `${h.toFixed(1)}h`;
+  return `${(h/24).toFixed(1)}d`;
+}
 
 // Quanto o acumulado de 7 dias eleva a "base" de repouso do nó, em metros por mm.
 // Calibração aproximada: 100mm acumulados em 7 dias eleva a base em ~0,5m.
@@ -512,6 +546,36 @@ function drawMap(){
     ctx.fillStyle='#e6edf7';
     ctx.font = `${Math.max(9,10*view.scale)}px sans-serif`;
     ctx.fillText(n.cota.toFixed(2)+'m', p.x, p.y+r+14);
+
+    // Chuva ativa agora → ícone visível embaixo do nó (só nós-fonte têm chuva própria)
+    let linhaExtra = r+28;
+    if(n.isSource && n.rain>0){
+      ctx.fillStyle='#3aa0ff';
+      ctx.font = `bold ${Math.max(9,10*view.scale)}px sans-serif`;
+      ctx.fillText(`☔ chovendo`, p.x, p.y+linhaExtra);
+      linhaExtra += 14;
+    }
+
+    // Projeção: em quanto tempo atinge alerta (60%) ou crítico (100%), com base na
+    // tendência real observada (regressão sobre o histórico), não um palpite fixo
+    const alvoAlerta = n.max*0.6, alvoCritico = n.max*1.0;
+    if(liveState.active){
+      if(n.cota < alvoAlerta){
+        const h = projetarHorasAte(n, alvoAlerta);
+        if(h!==null && h < 168){
+          ctx.fillStyle='#ffb020';
+          ctx.font = `${Math.max(8,9*view.scale)}px sans-serif`;
+          ctx.fillText(`⏱️ alerta em ${formatarHoras(h)}`, p.x, p.y+linhaExtra);
+        }
+      } else if(n.cota < alvoCritico){
+        const h = projetarHorasAte(n, alvoCritico);
+        if(h!==null && h < 168){
+          ctx.fillStyle='#ff4d4f';
+          ctx.font = `bold ${Math.max(8,9*view.scale)}px sans-serif`;
+          ctx.fillText(`⏱️ crítico em ${formatarHoras(h)}`, p.x, p.y+linhaExtra);
+        }
+      }
+    }
   });
 
   // rótulo N/S
@@ -754,12 +818,24 @@ function tick(){
     const baseEfetiva = calcularBaseEfetiva(n);
     n.cota += (baseEfetiva - n.cota) * n.decay * dt;
     checkAlert(n);
+
+    // Grava histórico a cada ~1 min real, pra alimentar a projeção de tendência
+    if(now - n.lastHistoryPush > 60000){
+      n.history.push({ t: now, cota: n.cota });
+      if(n.history.length > 240) n.history.shift(); // ~4h de histórico a 1min/ponto
+      n.lastHistoryPush = now;
+    }
   });
 
   drawMap();
   updateClockUI();
   if(activeTab==='sim') renderStatusList();
-  if(activeTab==='explore' && selectedNode) renderPanel();
+  if(activeTab==='explore' && selectedNode){
+    if(!tick.lastExploreRender || now - tick.lastExploreRender > 5000){
+      renderPanel();
+      tick.lastExploreRender = now;
+    }
+  }
 }
 
 function checkAlert(n){
@@ -1046,6 +1122,25 @@ function renderExploreTab(el){
       <p>${n.desc}</p>
     </div>
 
+    ${liveState.active && n.history.length>=3 ? `
+    <div class="card">
+      <h3>📈 Tendência Ao Vivo (Tempo Real)</h3>
+      <canvas class="spark" id="liveTrendCanvas"></canvas>
+      ${(() => {
+        const alvoAlerta = n.max*0.6, alvoCritico = n.max*1.0;
+        const slope = calcularTendencia(n);
+        if(slope===null) return '<p style="margin-top:8px;">Coletando dados... aguarde mais alguns minutos pra ter tendência confiável.</p>';
+        if(slope <= 0.001) return `<p style="margin-top:8px;">Tendência estável ou em queda (${(slope*100).toFixed(1)}cm/h). Sem risco de subida no ritmo atual.</p>`;
+        const hAlerta = n.cota < alvoAlerta ? projetarHorasAte(n, alvoAlerta) : null;
+        const hCritico = n.cota < alvoCritico ? projetarHorasAte(n, alvoCritico) : null;
+        let linhas = `<p style="margin-top:8px;">Subindo a <strong>${(slope*100).toFixed(1)}cm/h</strong>.</p>`;
+        if(hAlerta!==null) linhas += `<p>⏱️ Atinge <strong>nível de alerta</strong> em aproximadamente <strong>${formatarHoras(hAlerta)}</strong> se o ritmo atual continuar.</p>`;
+        if(hCritico!==null) linhas += `<p>⏱️ Atinge <strong>nível crítico</strong> em aproximadamente <strong>${formatarHoras(hCritico)}</strong> se o ritmo atual continuar.</p>`;
+        return linhas;
+      })()}
+      <p style="margin-top:8px; font-size:10.5px; color:var(--muted);">Projeção linear simples baseada nas últimas ${Math.min(n.history.length,20)} leituras — não considera mudança de chuva ainda não medida.</p>
+    </div>` : ''}
+
     <div class="card">
       <h3>Registro histórico — 2024</h3>
       <p><strong>${n.hist2024.label}</strong></p>
@@ -1065,6 +1160,7 @@ function renderExploreTab(el){
   `;
 
   drawSparkline(n);
+  drawLiveTrend(n);
 
   if(n.isSource){
     document.getElementById('localRain').oninput = e=>{
@@ -1080,6 +1176,71 @@ function renderExploreTab(el){
     renderExploreTab(el);
     drawMap();
   };
+}
+
+function drawLiveTrend(n){
+  const c = document.getElementById('liveTrendCanvas');
+  if(!c) return;
+  c.width = c.clientWidth*devicePixelRatio;
+  c.height = c.clientHeight*devicePixelRatio;
+  const sctx = c.getContext('2d');
+  sctx.clearRect(0,0,c.width,c.height);
+
+  const hist = n.history;
+  if(hist.length<2) return;
+
+  const slope = calcularTendencia(n); // m/h
+  const alvo = n.cota < n.max*0.6 ? n.max*0.6 : n.max*1.0;
+
+  // Monta pontos históricos + (se subindo) uma projeção futura até o alvo
+  const t0 = hist[0].t;
+  const pontos = hist.map(p=>({ x:(p.t-t0)/3600000, y:p.cota, proj:false }));
+  let horasProjetadas = 0;
+  if(slope!==null && slope>0.001 && n.cota < alvo){
+    horasProjetadas = Math.min((alvo-n.cota)/slope, 48); // não estica gráfico além de 48h projetadas
+    const ultimaHora = pontos[pontos.length-1].x;
+    pontos.push({ x: ultimaHora+horasProjetadas, y: alvo, proj:true });
+  }
+
+  const xs = pontos.map(p=>p.x), ys = pontos.map(p=>p.y);
+  const minX=Math.min(...xs), maxX=Math.max(...xs)||1;
+  const minY=Math.min(...ys, n.max*0.3), maxY=Math.max(...ys, alvo)*1.05;
+
+  const toPx = (x,y) => ({
+    px: ((x-minX)/(maxX-minX||1)) * c.width,
+    py: c.height - ((y-minY)/(maxY-minY||1)) * c.height
+  });
+
+  // Linha de limiar (alerta ou crítico, o que for o próximo alvo)
+  const limiarPx = toPx(minX, alvo).py;
+  sctx.strokeStyle = alvo===n.max ? 'rgba(255,77,79,.5)' : 'rgba(255,176,32,.5)';
+  sctx.setLineDash([3,3]);
+  sctx.beginPath();
+  sctx.moveTo(0, limiarPx); sctx.lineTo(c.width, limiarPx);
+  sctx.stroke();
+  sctx.setLineDash([]);
+
+  // Histórico real (linha sólida azul)
+  const reais = pontos.filter(p=>!p.proj);
+  sctx.strokeStyle = '#3aa0ff';
+  sctx.lineWidth = 2*devicePixelRatio;
+  sctx.beginPath();
+  reais.forEach((p,i)=>{ const {px,py}=toPx(p.x,p.y); i===0?sctx.moveTo(px,py):sctx.lineTo(px,py); });
+  sctx.stroke();
+
+  // Projeção futura (linha pontilhada laranja/vermelha)
+  if(pontos.length > reais.length){
+    const ultimo = reais[reais.length-1];
+    const proj = pontos[pontos.length-1];
+    const a = toPx(ultimo.x, ultimo.y), b = toPx(proj.x, proj.y);
+    sctx.strokeStyle = alvo===n.max ? '#ff4d4f' : '#ffb020';
+    sctx.lineWidth = 2*devicePixelRatio;
+    sctx.setLineDash([5,4]);
+    sctx.beginPath();
+    sctx.moveTo(a.px,a.py); sctx.lineTo(b.px,b.py);
+    sctx.stroke();
+    sctx.setLineDash([]);
+  }
 }
 
 function drawSparkline(n){
