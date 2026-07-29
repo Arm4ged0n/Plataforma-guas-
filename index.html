@@ -315,6 +315,43 @@ const EDGES = [
 const NODE_BASE = {}; // guarda cota inicial para reset
 Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
 
+// Quanto o acumulado de 7 dias eleva a "base" de repouso do nó, em metros por mm.
+// Calibração aproximada: 100mm acumulados em 7 dias eleva a base em ~0,5m.
+// Isso é uma aproximação didática, não um modelo hidrológico validado — mas já
+// resolve o erro grosseiro de tratar "sem chuva agora" como "sem risco".
+const FATOR_SATURACAO = 0.005;
+
+// Elevação de base própria do nó (a partir do acumulado de 7 dias que ele tem).
+function elevacaoPropria(node){
+  const accum = liveState.accum7d[node.id];
+  if(!accum) return 0;
+  const base = NODE_BASE[node.id];
+  return Math.min(accum.totalMm * FATOR_SATURACAO, (node.max-base)*0.6);
+}
+
+// Elevação efetiva do nó = a própria OU a de montante propagada pelos EDGES,
+// o que for maior — sem isso, Guaíba/Lagoa nunca refletiriam um rio (ex: Sinos)
+// já saturado quando, na hora exata da consulta, não está chovendo em lugar nenhum.
+function elevacaoBase(nodeId, visitados=new Set()){
+  if(visitados.has(nodeId)) return 0;
+  visitados.add(nodeId);
+  const node = NODES[nodeId];
+  let propria = elevacaoPropria(node);
+  let deMontante = 0;
+  EDGES.forEach(e=>{
+    if(e.to===nodeId){
+      deMontante = Math.max(deMontante, elevacaoBase(e.from, visitados) * e.factor);
+    }
+  });
+  return Math.max(propria, deMontante);
+}
+
+function calcularBaseEfetiva(node){
+  const base = NODE_BASE[node.id];
+  const elevacao = elevacaoBase(node.id);
+  return base + Math.min(elevacao, (node.max-base)*0.8);
+}
+
 /* =========================================================
    DADOS HISTÓRICOS ILUSTRATIVOS — abril/maio 2024
    Modelo educativo construído a partir dos relatos públicos
@@ -707,11 +744,15 @@ function tick(){
   // ritmo diferente na vida real: rio recua em horas/dias, Guaíba em dias,
   // Lagoa dos Patos em semanas. Isso evita o nó "travar" artificialmente
   // no teto mesmo depois que a chuva real já parou.
+  //
+  // IMPORTANTE: o alvo do decaimento não é mais o nível seco fixo (NODE_BASE) —
+  // é uma "base efetiva" elevada pela chuva acumulada dos últimos 7 dias. Sem
+  // isso, um rio com solo saturado (semana muito chuvosa) voltaria erradamente
+  // ao normal assim que a chuva do instante parasse — que foi exatamente o gap
+  // real que achamos (Sinos em cheia sem estar chovendo naquele minuto).
   Object.values(NODES).forEach(n=>{
-    const base = NODE_BASE[n.id];
-    if(n.cota>base){
-      n.cota -= (n.cota-base) * n.decay * dt;
-    }
+    const baseEfetiva = calcularBaseEfetiva(n);
+    n.cota += (baseEfetiva - n.cota) * n.decay * dt;
     checkAlert(n);
   });
 
@@ -1108,6 +1149,7 @@ let liveState = {
   intervalId:null,
   lastFetch:null,
   rainData:{},        // {nodeId: {mmAgora, mmProxHora, ts}}
+  accum7d:{},          // {nodeId: {totalMm, dias:[...]}} — chuva acumulada últimos 7 dias
   anaStatus:'não testado', // 'ok' | 'indisponível' | 'não testado'
   anaLastCheck:null,
 };
@@ -1116,7 +1158,10 @@ async function fetchChuvaReal(){
   const ids = Object.keys(RAIN_STATIONS);
   const lats = ids.map(id=>RAIN_STATIONS[id].lat).join(',');
   const lons = ids.map(id=>RAIN_STATIONS[id].lon).join(',');
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=precipitation&forecast_days=2&timezone=America%2FSao_Paulo`;
+  // hourly = chuva agora/próximas horas | daily precipitation_sum + past_days=7 = acumulado
+  // recente, que é o que realmente explica um rio já estar em cheia mesmo num instante seco
+  // (o Sinos, por exemplo, estava 0,27m acima da cota de inundação sem estar chovendo naquele minuto)
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=precipitation&daily=precipitation_sum&past_days=7&forecast_days=2&timezone=America%2FSao_Paulo`;
 
   const resp = await fetch(url);
   if(!resp.ok) throw new Error('Open-Meteo respondeu '+resp.status);
@@ -1144,6 +1189,14 @@ async function fetchChuvaReal(){
     const mmAgora = r.hourly.precipitation[iAtual] ?? 0;
     const mmProxHora = r.hourly.precipitation[iAtual+1] ?? mmAgora;
     liveState.rainData[id] = { mmAgora, mmProxHora, ts:new Date() };
+
+    // Acumulado dos últimos 7 dias reais (exclui os dias de previsão futura do array 'daily')
+    if(r.daily && r.daily.precipitation_sum){
+      const hojeIdx = r.daily.time.indexOf(horaAtualStr.slice(0,10));
+      const diasPassados = hojeIdx >= 0 ? r.daily.precipitation_sum.slice(Math.max(0,hojeIdx-7), hojeIdx+1) : r.daily.precipitation_sum.slice(0,7);
+      const total7d = diasPassados.reduce((s,v)=>s+(v||0), 0);
+      liveState.accum7d[id] = { totalMm: total7d, dias: diasPassados };
+    }
 
     // Diagnóstico: horário exato lido + próximas 6h, pra confirmar se é bug ou dado real
     liveState.debug.porNode[id] = {
@@ -1194,6 +1247,14 @@ async function ativarModoTempoReal(){
   if(activeTab==='live') renderPanel(); // mostra "carregando" imediatamente, sem ficar em branco
 
   await atualizarChuvaAgora(); // primeira busca, agora blindada — se falhar, não quebra o resto
+
+  // Parte já do nível coerente com o acumulado de 7 dias, em vez de começar
+  // "seco" e demorar horas reais pra convergir via decaimento.
+  Object.values(NODES).forEach(n=>{
+    n.cota = calcularBaseEfetiva(n);
+  });
+  drawMap();
+
   await testarANALegado();
   startSim();
   logEvent('Modo Tempo Real ativado — chuva real (Open-Meteo) alimentando a simulação em tempo real (1s = 1s).', 'info');
@@ -1265,6 +1326,39 @@ function renderLiveTab(el){
         }).join('')}
       </div>
     </div>
+
+    <div class="card">
+      <h3>☔ Chuva Acumulada — Últimos 7 Dias</h3>
+      <p style="margin-bottom:8px;">Isso é o que realmente explica um rio já estar em risco mesmo num instante sem chuva — solo saturado, vazão de dias anteriores ainda escoando.</p>
+      ${Object.keys(RAIN_STATIONS).map(id=>{
+        const a = liveState.accum7d[id];
+        return `<div class="stat-row"><span class="label">${NODES[id].name}</span><span class="val">${a ? a.totalMm.toFixed(0)+' mm' : '—'}</span></div>`;
+      }).join('')}
+      <p style="margin-top:10px; font-size:11px;">Base elevada calculada por nó (referência seca → nível de repouso atual):</p>
+      ${Object.values(NODES).map(n=>{
+        const efetiva = liveState.accum7d && Object.keys(liveState.accum7d).length ? calcularBaseEfetiva(n) : null;
+        if(efetiva===null) return '';
+        return `<div class="stat-row"><span class="label">${n.name}</span><span class="val">${NODE_BASE[n.id].toFixed(2)}m → ${efetiva.toFixed(2)}m</span></div>`;
+      }).join('')}
+    </div>
+
+    ${liveState.debug ? `
+    <div class="card">
+      <h3>🔬 Diagnóstico (verificar se é bug ou dado real)</h3>
+      <p style="margin-bottom:8px;">Hora consultada (local Brasília): <strong>${liveState.debug.horaConsultada}h</strong></p>
+      ${Object.keys(RAIN_STATIONS).map(id=>{
+        const dbg = liveState.debug.porNode[id];
+        if(!dbg) return '';
+        return `
+          <p style="margin-top:10px;"><strong>${NODES[id].name}</strong> — hora lida da API: ${dbg.horaLida}</p>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">
+            ${dbg.proximas6h.map(h=>`<span class="badge ${h.mm>0?'b-warn':'b-ok'}" style="font-size:10px;">${h.hora}: ${h.mm.toFixed(1)}mm</span>`).join('')}
+          </div>
+        `;
+      }).join('')}
+      <p style="margin-top:10px;">Se a "hora lida" bater com a hora atual real e as próximas 6h mostrarem tudo zerado, o dado está correto — só não está chovendo nesse ponto exato agora. Se a hora lida estiver visivelmente errada, me manda print disso que ainda tem bug.</p>
+    </div>
+    ` : ''}
 
     <div class="card">
       <h3>Caminho para dado oficial de cota (definitivo)</h3>
