@@ -1129,6 +1129,7 @@ async function fetchChuvaReal(){
   // não em UTC. Comparar com now.toISOString() (que é UTC) nunca batia — por isso sempre
   // caía no fallback e lia a hora errada, mostrando 0.0mm mesmo quando estava chovendo.
   const horaAtualStr = horaLocalSaoPaulo(); // ex: "2026-07-29T06"
+  liveState.debug = { horaConsultada: horaAtualStr, porNode:{} };
 
   results.forEach((r, idx)=>{
     const id = ids[idx];
@@ -1143,6 +1144,15 @@ async function fetchChuvaReal(){
     const mmAgora = r.hourly.precipitation[iAtual] ?? 0;
     const mmProxHora = r.hourly.precipitation[iAtual+1] ?? mmAgora;
     liveState.rainData[id] = { mmAgora, mmProxHora, ts:new Date() };
+
+    // Diagnóstico: horário exato lido + próximas 6h, pra confirmar se é bug ou dado real
+    liveState.debug.porNode[id] = {
+      horaLida: r.hourly.time[iAtual],
+      proximas6h: r.hourly.time.slice(iAtual, iAtual+6).map((t,i)=>({
+        hora: t.slice(11,16),
+        mm: r.hourly.precipitation[iAtual+i]
+      })),
+    };
   });
 
   liveState.lastFetch = new Date();
