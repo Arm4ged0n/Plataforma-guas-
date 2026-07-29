@@ -1088,6 +1088,19 @@ const RAIN_STATIONS = {
   sinos: { lat:-29.76, lon:-51.15 },
 };
 
+// Retorna "yyyy-mm-ddThh" na hora local de Brasília, no mesmo formato que a
+// Open-Meteo usa quando pedimos timezone=America/Sao_Paulo — sem isso, comparar
+// com now.toISOString() (UTC) nunca bate, porque Brasília é UTC-3.
+function horaLocalSaoPaulo(){
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', hourCycle:'h23'
+  });
+  const partes = {};
+  fmt.formatToParts(new Date()).forEach(p=>{ partes[p.type]=p.value; });
+  return `${partes.year}-${partes.month}-${partes.day}T${partes.hour}`;
+}
+
 let liveState = {
   active:false,
   loading:false,
@@ -1112,16 +1125,24 @@ async function fetchChuvaReal(){
   // Quando latitude/longitude têm múltiplos valores, a API retorna um array de resultados
   const results = Array.isArray(json) ? json : [json];
 
+  // A API devolve hourly.time em horário LOCAL de Brasília (timezone=America/Sao_Paulo),
+  // não em UTC. Comparar com now.toISOString() (que é UTC) nunca batia — por isso sempre
+  // caía no fallback e lia a hora errada, mostrando 0.0mm mesmo quando estava chovendo.
+  const horaAtualStr = horaLocalSaoPaulo(); // ex: "2026-07-29T06"
+
   results.forEach((r, idx)=>{
     const id = ids[idx];
     if(!r || !r.hourly) return;
-    const now = new Date();
-    const horaAtualStr = now.toISOString().slice(0,13); // yyyy-mm-ddThh
     let iAtual = r.hourly.time.findIndex(t => t.startsWith(horaAtualStr));
-    if(iAtual === -1) iAtual = 0;
+    if(iAtual === -1){
+      // Fallback seguro: pega a hora mais próxima em vez de travar sempre no índice 0
+      iAtual = r.hourly.time.reduce((melhorIdx, t, i)=>{
+        return Math.abs(t.localeCompare(horaAtualStr)) < Math.abs(r.hourly.time[melhorIdx].localeCompare(horaAtualStr)) ? i : melhorIdx;
+      }, 0);
+    }
     const mmAgora = r.hourly.precipitation[iAtual] ?? 0;
     const mmProxHora = r.hourly.precipitation[iAtual+1] ?? mmAgora;
-    liveState.rainData[id] = { mmAgora, mmProxHora, ts:now };
+    liveState.rainData[id] = { mmAgora, mmProxHora, ts:new Date() };
   });
 
   liveState.lastFetch = new Date();
