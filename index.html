@@ -1090,6 +1090,8 @@ const RAIN_STATIONS = {
 
 let liveState = {
   active:false,
+  loading:false,
+  lastError:null,
   intervalId:null,
   lastFetch:null,
   rainData:{},        // {nodeId: {mmAgora, mmProxHora, ts}}
@@ -1155,23 +1157,36 @@ async function ativarModoTempoReal(){
   if(simRunning) pauseSim(); // encerra qualquer simulação manual em andamento
   resetSim(); // começa de um estado limpo — sem resíduo de testes manuais anteriores
   liveState.active = true;
+  liveState.loading = true;
+  liveState.lastError = null;
   updateLiveBadge();
-  await fetchChuvaReal();
-  aplicarChuvaReal();
+  if(activeTab==='live') renderPanel(); // mostra "carregando" imediatamente, sem ficar em branco
+
+  await atualizarChuvaAgora(); // primeira busca, agora blindada — se falhar, não quebra o resto
   await testarANALegado();
   startSim();
   logEvent('Modo Tempo Real ativado — chuva real (Open-Meteo) alimentando a simulação em tempo real (1s = 1s).', 'info');
 
-  liveState.intervalId = setInterval(async ()=>{
-    try{
-      await fetchChuvaReal();
-      aplicarChuvaReal();
-      logEvent('Dados de chuva atualizados (Open-Meteo).', 'info');
-    }catch(e){
-      logEvent('Falha ao atualizar chuva real: '+e.message, 'alert');
-    }
-  }, 10*60*1000); // atualiza a cada 10 min
+  // Este intervalo é registrado incondicionalmente — mesmo que a primeira busca acima
+  // tenha falhado, as tentativas seguintes continuam acontecendo a cada 10 min.
+  liveState.intervalId = setInterval(atualizarChuvaAgora, 10*60*1000);
 
+  if(activeTab==='live') renderPanel();
+}
+
+async function atualizarChuvaAgora(){
+  liveState.loading = true;
+  if(activeTab==='live') renderPanel();
+  try{
+    await fetchChuvaReal();
+    aplicarChuvaReal();
+    liveState.lastError = null;
+    logEvent('Dados de chuva atualizados (Open-Meteo).', 'info');
+  }catch(e){
+    liveState.lastError = e.message;
+    logEvent('Falha ao atualizar chuva real: '+e.message, 'alert');
+  }
+  liveState.loading = false;
   if(activeTab==='live') renderPanel();
 }
 
@@ -1202,9 +1217,12 @@ function renderLiveTab(el){
       <button class="btn btn-primary" id="btnToggleLive">
         ${liveState.active ? '⏸ Desativar Tempo Real' : '🛰️ Ativar Tempo Real'}
       </button>
+      ${liveState.active ? '<button class="btn btn-outline" id="btnRefreshNow">🔄 Atualizar agora (não esperar 10 min)</button>' : ''}
       <button class="btn btn-outline" id="btnResetLive">↻ Resetar cotas (zerar acumulado)</button>
       <p style="margin-top:8px;">${liveState.active ? 'Atualizando chuva real a cada 10 minutos e propagando no mapa em tempo real (1s real = 1s de hidrologia — não mais acelerado).' : 'Ao ativar, a plataforma busca a chuva real agora e a cada 10 min, alimentando a cascata automaticamente em tempo real.'}</p>
-      ${liveState.lastFetch ? `<div class="node-sub" style="margin-top:8px;">Última atualização: ${liveState.lastFetch.toLocaleTimeString('pt-BR')}</div>` : ''}
+      ${liveState.loading ? '<div class="badge b-warn" style="margin-top:8px;">⏳ Buscando dados agora...</div>' : ''}
+      ${liveState.lastError ? `<div class="badge b-danger" style="margin-top:8px;">❌ Última tentativa falhou: ${liveState.lastError}</div>` : ''}
+      ${liveState.lastFetch ? `<div class="node-sub" style="margin-top:8px;">Última atualização com sucesso: ${liveState.lastFetch.toLocaleTimeString('pt-BR')}</div>` : ''}
     </div>
 
     <div class="card">
@@ -1226,6 +1244,8 @@ function renderLiveTab(el){
   document.getElementById('btnToggleLive').onclick = ()=>{
     liveState.active ? desativarModoTempoReal() : ativarModoTempoReal();
   };
+  const btnRefresh = document.getElementById('btnRefreshNow');
+  if(btnRefresh) btnRefresh.onclick = atualizarChuvaAgora;
   document.getElementById('btnResetLive').onclick = ()=>{
     resetSim();
     if(liveState.active) aplicarChuvaReal();
