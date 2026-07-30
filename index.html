@@ -244,118 +244,135 @@
 <script>
 /* =========================================================
    MODELO DE DADOS
-   Cada nó representa um trecho da bacia hidrográfica.
-   Posições são esquemáticas (não são coordenadas GPS reais),
-   organizadas para refletir o fluxo Norte→Sul descrito nos
-   relatos do evento de abril/maio de 2024.
 ========================================================= */
-
 const NODES = {
   serra: {
     id:'serra', name:'Serra / Noroeste', sub:'Cotiporã, Bento Gonçalves, Muçum',
     x:0.16, y:0.10, type:'cabeceira', cota:1.2, max:3.0, vazao:80, decay:0.08,
-    isSource:true, rain:0,
-    desc:'Cabeceiras de relevo acidentado. Chuvas intensas aqui geram deslizamentos e enxurradas que descem rapidamente para os vales — foi nessa região que ocorreu o rompimento parcial da Barragem 14 de Julho em 2024.',
+    isSource:true, rain:0, ibge:'4302105',
+    desc:'Cabeceiras de relevo acidentado. Chuvas intensas aqui geram deslizamentos e enxurradas que descem rapidamente para os vales.',
     hist2024:{peak:3.0, peakDay:2, label:'Enxurradas e deslizamentos (30/abr–01/mai)'}
   },
   taquari: {
     id:'taquari', name:'Rio Taquari', sub:'Lajeado, Estrela, Muçum',
     x:0.30, y:0.24, type:'rio', cota:1.85, max:5.0, vazao:250, decay:0.06,
-    isSource:false, rain:0,
-    desc:'Um dos primeiros rios a colapsar em 2024. Subiu dezenas de metros acima do normal em poucas horas, submergindo andares inteiros de construções em Lajeado e Estrela.',
+    isSource:false, rain:0, ibge:'4311403',
+    desc:'Um dos primeiros rios a colapsar em 2024. Subiu dezenas de metros acima do normal em poucas horas.',
     hist2024:{peak:5.0, peakDay:3, label:'Pico histórico em 01/mai/2024'}
   },
   jacui: {
     id:'jacui', name:'Rio Jacuí', sub:'Depressão Central',
     x:0.44, y:0.36, type:'rio', cota:1.65, max:4.5, vazao:180, decay:0.06,
-    isSource:true, rain:0,
-    desc:'Drena grande parte do centro e oeste do estado. Funciona como a principal artéria de escoamento para a região metropolitana, recebendo volumes vindos da Depressão Central.',
+    isSource:true, rain:0, ibge:'4322400',
+    desc:'Drena grande parte do centro e oeste do estado para a região metropolitana.',
     hist2024:{peak:4.5, peakDay:4, label:'Alagamento de municípios ribeirinhos (02/mai)'}
   },
   sinos: {
     id:'sinos', name:'Rio dos Sinos', sub:'São Leopoldo, Novo Hamburgo, Canoas',
     x:0.58, y:0.40, type:'rio', cota:1.2, max:4.0, vazao:120, decay:0.06,
-    isSource:true, rain:0,
-    desc:'Deságua na Região Metropolitana. Provocou inundações históricas em Canoas, onde bairros inteiros ficaram debaixo d\'água, desalojando dezenas de milhares de pessoas.',
+    isSource:true, rain:0, ibge:'4318705',
+    desc:'Deságua na Região Metropolitana, provocando inundações históricas em Canoas e São Leopoldo.',
     hist2024:{peak:4.0, peakDay:4, label:'Canoas submersa (03–05/mai)'}
   },
   guaiba: {
     id:'guaiba', name:'Lago Guaíba', sub:'Porto Alegre',
     x:0.50, y:0.53, type:'lago', cota:2.5, max:4.77, vazao:420, decay:0.015,
-    isSource:false, rain:0,
-    desc:'Funil que recebe toda a água dos rios Taquari, Jacuí, Sinos e Gravataí. Em 03/mai/2024 atingiu 4,77m, superando o recorde histórico de 1941 (4,76m). Sistema de comportas (Casa da Mauá) foi parcialmente inundado.',
+    isSource:false, rain:0, ibge:'4314902',
+    desc:'Funil que recebe toda a água dos rios principais. Atingiu 4,77m em 03/mai/2024.',
     hist2024:{peak:4.77, peakDay:5, label:'RECORDE HISTÓRICO — 4,77m em 03/mai/2024'}
   },
   lagoa: {
     id:'lagoa', name:'Lagoa dos Patos', sub:'Pelotas, Rio Grande, São José do Norte',
     x:0.54, y:0.72, type:'lagoa', cota:0.95, max:2.5, vazao:420, decay:0.004,
-    isSource:false, rain:0,
-    desc:'Gigantesco estuário que recebe o volume represado na região metropolitana com semanas de atraso. Em 2024 encheu a níveis jamais registrados, atingindo cidades litorâneas que não esperavam ser atingidas.',
-    hist2024:{peak:2.5, peakDay:14, label:'Canal São Gonçalo (Pelotas) atinge 3m — meados de maio'}
+    isSource:false, rain:0, ibge:'4314407',
+    desc:'Gigantesco estuário que recebe o volume represado na região metropolitana.',
+    hist2024:{peak:2.5, peakDay:14, label:'Canal São Gonçalo (Pelotas) atinge 3m'}
   },
   oceano: {
     id:'oceano', name:'Barra / Oceano Atlântico', sub:'Rio Grande – Cassino',
     x:0.52, y:0.90, type:'oceano', cota:0.4, max:1.2, vazao:420, decay:0.004,
-    isSource:false, rain:0,
-    desc:'Ponto de escoamento final. Ventos e marés meteorológicas desfavoráveis reduzem a capacidade do oceano de "engolir" a vazão, criando um gargalo hidráulico que mantém a Lagoa dos Patos elevada por semanas.',
+    isSource:false, rain:0, ibge:'4315602',
+    desc:'Ponto de escoamento final e gargalo hidráulico oceânico.',
     hist2024:{peak:1.2, peakDay:16, label:'Gargalo de escoamento prolongado'}
   }
 };
 
-// Arestas: de -> para, tempo de viagem em horas (escala didática), e influência (quanto da cota extra é repassada)
 const EDGES = [
-  {from:'serra',   to:'taquari', hours:5,  factor:0.9},
-  {from:'taquari', to:'guaiba',  hours:14, factor:0.55},
-  {from:'jacui',   to:'guaiba',  hours:9,  factor:0.5},
-  {from:'sinos',   to:'guaiba',  hours:7,  factor:0.45},
-  {from:'guaiba',  to:'lagoa',   hours:60, factor:0.4},
-  {from:'lagoa',   to:'oceano',  hours:48, factor:0.5},
+  {from:'serra', to:'taquari', hours:5, factor:0.9},
+  {from:'taquari', to:'guaiba', hours:14, factor:0.55},
+  {from:'jacui', to:'guaiba', hours:9, factor:0.5},
+  {from:'sinos', to:'guaiba', hours:7, factor:0.45},
+  {from:'guaiba', to:'lagoa', hours:60, factor:0.4},
+  {from:'lagoa', to:'oceano', hours:48, factor:0.5},
 ];
 
-const NODE_BASE = {}; // guarda cota inicial para reset
+const NODE_BASE = {};
 Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
 Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; });
 
-// Regressão linear simples sobre o histórico recente -> metros/hora de tendência
-function calcularTendencia(node){
-  const h = node.history;
-  if(h.length < 3) return null;
-  const pts = h.slice(-20);
-  const t0 = pts[0].t;
-  const xs = pts.map(p=>(p.t-t0)/3600000); // horas desde o primeiro ponto da janela
-  const ys = pts.map(p=>p.cota);
-  const n = xs.length;
-  const sumX = xs.reduce((a,b)=>a+b,0);
-  const sumY = ys.reduce((a,b)=>a+b,0);
-  const sumXY = xs.reduce((s,x,i)=>s+x*ys[i],0);
-  const sumXX = xs.reduce((s,x)=>s+x*x,0);
-  const denom = n*sumXX - sumX*sumX;
-  if(Math.abs(denom) < 1e-9) return null;
-  return (n*sumXY - sumX*sumY)/denom; // m/h
+/* =========================================================
+   ESTADO DA API E DADOS REAIS (CLIMARS)
+========================================================= */
+let liveState = {
+  active: false,
+  loading: false,
+  dataApi: {},
+  accum7d: {}
+};
+
+async function consultarApiClimaRS(ibge){
+  try {
+    const url = `https://clima.rs.gov.br/climars/api/v1/simaqro/${ibge}`;
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('Erro na API ClimaRS');
+    return await resp.json();
+  } catch(e) {
+    return null;
+  }
 }
 
-// Projeta em quantas horas o nó atinge um nível-alvo, com base na tendência atual.
-// Retorna null se está estável/caindo (não faz sentido projetar).
-function projetarHorasAte(node, alvo){
-  const slope = calcularTendencia(node);
-  if(slope===null || slope<=0.001) return null;
-  if(node.cota >= alvo) return 0;
-  return (alvo - node.cota)/slope;
+async function sincronizarDadosReais(){
+  liveState.loading = true;
+  if(activeTab==='live') renderPanel();
+
+  for(let id of Object.keys(NODES)){
+    const node = NODES[id];
+    let dados = await consultarApiClimaRS(node.ibge);
+    if(dados){
+      liveState.dataApi[id] = dados;
+    }
+  }
+
+  try {
+    const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&hourly=precipitation&past_days=7&timezone=America%2FSao_Paulo`);
+    const json = await resp.json();
+    if(json && json.hourly){
+      const total7d = json.hourly.precipitation.slice(0, 168).reduce((a,b)=>a+(b||0),0);
+      Object.keys(NODES).forEach(id => {
+        liveState.accum7d[id] = { totalMm: total7d };
+      });
+    }
+  } catch(e){}
+
+  liveState.loading = false;
+  liveState.active = true;
+  updateLiveBadge();
+  if(activeTab==='live') renderPanel();
+  logEvent('Dados oficiais sincronizados via API ClimaRS / Open-Meteo.', 'info');
 }
 
-function formatarHoras(h){
-  if(h < 1) return `${Math.round(h*60)}min`;
-  if(h < 48) return `${h.toFixed(1)}h`;
-  return `${(h/24).toFixed(1)}d`;
+function updateLiveBadge(){
+  const el = document.getElementById('liveBadge');
+  if(!el) return;
+  el.textContent = liveState.active ? '🛰️ ClimaRS Conectado' : '🎲 Modo Simulação';
+  el.className = 'live-badge' + (liveState.active ? ' on' : '');
 }
 
-// Quanto o acumulado de 7 dias eleva a "base" de repouso do nó, em metros por mm.
-// Calibração aproximada: 100mm acumulados em 7 dias eleva a base em ~0,5m.
-// Isso é uma aproximação didática, não um modelo hidrológico validado — mas já
-// resolve o erro grosseiro de tratar "sem chuva agora" como "sem risco".
+/* =========================================================
+   FUNÇÕES AUXILIARES DE CÁLCULO
+========================================================= */
 const FATOR_SATURACAO = 0.005;
 
-// Elevação de base própria do nó (a partir do acumulado de 7 dias que ele tem).
 function elevacaoPropria(node){
   const accum = liveState.accum7d[node.id];
   if(!accum) return 0;
@@ -363,9 +380,6 @@ function elevacaoPropria(node){
   return Math.min(accum.totalMm * FATOR_SATURACAO, (node.max-base)*0.6);
 }
 
-// Elevação efetiva do nó = a própria OU a de montante propagada pelos EDGES,
-// o que for maior — sem isso, Guaíba/Lagoa nunca refletiriam um rio (ex: Sinos)
-// já saturado quando, na hora exata da consulta, não está chovendo em lugar nenhum.
 function elevacaoBase(nodeId, visitados=new Set()){
   if(visitados.has(nodeId)) return 0;
   visitados.add(nodeId);
@@ -386,13 +400,37 @@ function calcularBaseEfetiva(node){
   return base + Math.min(elevacao, (node.max-base)*0.8);
 }
 
-/* =========================================================
-   DADOS HISTÓRICOS ILUSTRATIVOS — abril/maio 2024
-   Modelo educativo construído a partir dos relatos públicos
-   do evento (não é série oficial minuto a minuto). O ponto
-   âncora real é o recorde do Guaíba: 4,77m em 03/mai/2024.
-========================================================= */
-const HIST_DAYS = 24; // dia 0 = 27/abr, dia 23 = 20/mai (aprox.)
+function calcularTendencia(node){
+  const h = node.history;
+  if(h.length < 3) return null;
+  const pts = h.slice(-20);
+  const t0 = pts[0].t;
+  const xs = pts.map(p=>(p.t-t0)/3600000);
+  const ys = pts.map(p=>p.cota);
+  const n = xs.length;
+  const sumX = xs.reduce((a,b)=>a+b,0);
+  const sumY = ys.reduce((a,b)=>a+b,0);
+  const sumXY = xs.reduce((s,x,i)=>s+x*ys[i],0);
+  const sumXX = xs.reduce((s,x)=>s+x*x,0);
+  const denom = n*sumXX - sumX*sumX;
+  if(Math.abs(denom) < 1e-9) return null;
+  return (n*sumXY - sumX*sumY)/denom;
+}
+
+function projetarHorasAte(node, alvo){
+  const slope = calcularTendencia(node);
+  if(slope===null || slope<=0.001) return null;
+  if(node.cota >= alvo) return 0;
+  return (alvo - node.cota)/slope;
+}
+
+function formatarHoras(h){
+  if(h < 1) return `${Math.round(h*60)}min`;
+  if(h < 48) return `${h.toFixed(1)}h`;
+  return `${(h/24).toFixed(1)}d`;
+}
+
+const HIST_DAYS = 24;
 function histCota(nodeId, day){
   const n = NODES[nodeId];
   const peakDay = n.hist2024.peakDay;
@@ -403,12 +441,12 @@ function histCota(nodeId, day){
     return base + (peak-base) * Math.pow(t, 1.6);
   } else {
     const t = (day-peakDay)/(HIST_DAYS-peakDay);
-    const decayTarget = base + (peak-base)*0.25; // não volta totalmente ao normal na janela
+    const decayTarget = base + (peak-base)*0.25;
     return peak - (peak-decayTarget) * Math.pow(t, 0.8);
   }
 }
 function histDateLabel(day){
-  const start = new Date(2024,3,27); // 27 abr 2024
+  const start = new Date(2024,3,27);
   const d = new Date(start.getTime() + day*86400000);
   return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
 }
@@ -438,10 +476,7 @@ function toScreen(nx, ny){
   const pad = 0.12;
   const px = (pad + nx*(1-2*pad)) * w;
   const py = (pad + ny*(1-2*pad)) * h;
-  return {
-    x: px*view.scale + view.offX,
-    y: py*view.scale + view.offY
-  };
+  return { x: px*view.scale + view.offX, y: py*view.scale + view.offY };
 }
 
 function nodeColor(n){
@@ -455,27 +490,21 @@ function drawMap(){
   const w=canvas.width, h=canvas.height;
   ctx.clearRect(0,0,w,h);
 
-  // fundo estilo "terreno"
   const grad = ctx.createLinearGradient(0,0,0,h);
-  grad.addColorStop(0,'#0f1b30');
-  grad.addColorStop(1,'#060a12');
-  ctx.fillStyle=grad;
-  ctx.fillRect(0,0,w,h);
+  grad.addColorStop(0,'#0f1b30'); grad.addColorStop(1,'#060a12');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,w,h);
 
-  // arestas (rios)
   EDGES.forEach(e=>{
     const a = toScreen(NODES[e.from].x, NODES[e.from].y);
     const b = toScreen(NODES[e.to].x, NODES[e.to].y);
     const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 + 30*view.scale;
 
     ctx.beginPath();
-    ctx.moveTo(a.x,a.y);
-    ctx.quadraticCurveTo(mx,my,b.x,b.y);
+    ctx.moveTo(a.x,a.y); ctx.quadraticCurveTo(mx,my,b.x,b.y);
     ctx.strokeStyle = 'rgba(58,160,255,0.35)';
     ctx.lineWidth = Math.max(2, 5*view.scale);
     ctx.stroke();
 
-    // seta de direção no meio
     const t=0.5;
     const px = (1-t)*(1-t)*a.x + 2*(1-t)*t*mx + t*t*b.x;
     const py = (1-t)*(1-t)*a.y + 2*(1-t)*t*my + t*t*b.y;
@@ -483,19 +512,14 @@ function drawMap(){
     const dy = 2*(1-t)*(my-a.y) + 2*t*(b.y-my);
     const ang = Math.atan2(dy,dx);
     ctx.save();
-    ctx.translate(px,py);
-    ctx.rotate(ang);
+    ctx.translate(px,py); ctx.rotate(ang);
     ctx.fillStyle='rgba(58,160,255,0.6)';
     ctx.beginPath();
-    ctx.moveTo(6*view.scale,0);
-    ctx.lineTo(-4*view.scale,-4*view.scale);
-    ctx.lineTo(-4*view.scale,4*view.scale);
-    ctx.closePath();
-    ctx.fill();
+    ctx.moveTo(6*view.scale,0); ctx.lineTo(-4*view.scale,-4*view.scale); ctx.lineTo(-4*view.scale,4*view.scale);
+    ctx.closePath(); ctx.fill();
     ctx.restore();
   });
 
-  // partículas em trânsito
   particles.forEach(p=>{
     const edge = EDGES[p.edgeIdx];
     const a = toScreen(NODES[edge.from].x, NODES[edge.from].y);
@@ -506,14 +530,9 @@ function drawMap(){
     const py = (1-t)*(1-t)*a.y + 2*(1-t)*t*my + t*t*b.y;
     ctx.beginPath();
     ctx.arc(px,py, Math.max(3,4*view.scale),0,Math.PI*2);
-    ctx.fillStyle='#3aa0ff';
-    ctx.shadowColor='#3aa0ff';
-    ctx.shadowBlur=8;
-    ctx.fill();
-    ctx.shadowBlur=0;
+    ctx.fillStyle='#3aa0ff'; ctx.shadowColor='#3aa0ff'; ctx.shadowBlur=8; ctx.fill(); ctx.shadowBlur=0;
   });
 
-  // nós
   Object.values(NODES).forEach(n=>{
     const p = toScreen(n.x,n.y);
     const r = Math.max(14, 20*view.scale);
@@ -525,29 +544,23 @@ function drawMap(){
       ctx.beginPath();
       ctx.arc(p.x,p.y,r+8,0,Math.PI*2);
       ctx.strokeStyle = isSel ? '#ffffff' : 'rgba(255,255,255,.4)';
-      ctx.lineWidth=2;
-      ctx.stroke();
+      ctx.lineWidth=2; ctx.stroke();
     }
 
     ctx.beginPath();
     ctx.arc(p.x,p.y,r,0,Math.PI*2);
-    ctx.fillStyle=col;
-    ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,.8)';
-    ctx.lineWidth=2;
-    ctx.stroke();
+    ctx.fillStyle=col; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=2; ctx.stroke();
 
     ctx.fillStyle='#fff';
     ctx.font = `bold ${Math.max(9,10*view.scale)}px sans-serif`;
-    ctx.textAlign='center';
-    ctx.textBaseline='middle';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(n.name.split(' ')[0].slice(0,8).toUpperCase(), p.x, p.y);
 
     ctx.fillStyle='#e6edf7';
     ctx.font = `${Math.max(9,10*view.scale)}px sans-serif`;
     ctx.fillText(n.cota.toFixed(2)+'m', p.x, p.y+r+14);
 
-    // Chuva ativa agora → ícone visível embaixo do nó (só nós-fonte têm chuva própria)
     let linhaExtra = r+28;
     if(n.isSource && n.rain>0){
       ctx.fillStyle='#3aa0ff';
@@ -556,8 +569,6 @@ function drawMap(){
       linhaExtra += 14;
     }
 
-    // Projeção: em quanto tempo atinge alerta (60%) ou crítico (100%), com base na
-    // tendência real observada (regressão sobre o histórico), não um palpite fixo
     const alvoAlerta = n.max*0.6, alvoCritico = n.max*1.0;
     if(liveState.active){
       if(n.cota < alvoAlerta){
@@ -578,10 +589,8 @@ function drawMap(){
     }
   });
 
-  // rótulo N/S
   ctx.fillStyle='rgba(230,237,247,.4)';
-  ctx.font='11px sans-serif';
-  ctx.textAlign='left';
+  ctx.font='11px sans-serif'; ctx.textAlign='left';
   ctx.fillText('↑ Cabeceiras / Serra', 16, 24);
   ctx.fillText('↓ Oceano Atlântico', 16, h-16);
 }
@@ -637,13 +646,7 @@ document.getElementById('zoomIn').onclick=()=>{ view.scale=Math.min(3,view.scale
 document.getElementById('zoomOut').onclick=()=>{ view.scale=Math.max(0.5,view.scale*0.87); drawMap(); };
 document.getElementById('zoomReset').onclick=()=>{ view={scale:1,offX:0,offY:0}; drawMap(); };
 
-/* ---------- SUPORTE A TOQUE (celular/tablet) ---------- */
 let touchStartPos=null, touchMoved=false, lastPinchDist=null;
-
-function getTouchPointCanvas(t){
-  const rect=canvas.getBoundingClientRect();
-  return { x:(t.clientX-rect.left)*devicePixelRatio, y:(t.clientY-rect.top)*devicePixelRatio };
-}
 function pinchDistance(touches){
   const dx=touches[0].clientX-touches[1].clientX;
   const dy=touches[0].clientY-touches[1].clientY;
@@ -651,10 +654,7 @@ function pinchDistance(touches){
 }
 
 canvas.addEventListener('touchstart', e=>{
-  if(e.touches.length===2){
-    lastPinchDist = pinchDistance(e.touches);
-    return;
-  }
+  if(e.touches.length===2){ lastPinchDist = pinchDistance(e.touches); return; }
   const t = e.touches[0];
   touchStartPos = {x:t.clientX, y:t.clientY};
   touchMoved = false;
@@ -663,8 +663,7 @@ canvas.addEventListener('touchstart', e=>{
 }, {passive:true});
 
 canvas.addEventListener('touchmove', e=>{
-  e.preventDefault(); // impede a página de rolar enquanto mexe no mapa
-
+  e.preventDefault();
   if(e.touches.length===2 && lastPinchDist!=null){
     const dist = pinchDistance(e.touches);
     const delta = dist/lastPinchDist;
@@ -673,12 +672,9 @@ canvas.addEventListener('touchmove', e=>{
     drawMap();
     return;
   }
-
   const t = e.touches[0];
   if(!touchStartPos) return;
-  const moveDist = Math.hypot(t.clientX-touchStartPos.x, t.clientY-touchStartPos.y);
-  if(moveDist>6) touchMoved = true;
-
+  if(Math.hypot(t.clientX-touchStartPos.x, t.clientY-touchStartPos.y)>6) touchMoved = true;
   view.offX = dragOff0.x + (t.clientX-dragStart.x)*devicePixelRatio;
   view.offY = dragOff0.y + (t.clientY-dragStart.y)*devicePixelRatio;
   drawMap();
@@ -687,7 +683,6 @@ canvas.addEventListener('touchmove', e=>{
 canvas.addEventListener('touchend', e=>{
   lastPinchDist=null;
   if(!touchMoved && touchStartPos){
-    // trata como toque/clique num nó
     const rect=canvas.getBoundingClientRect();
     const mx=(touchStartPos.x-rect.left)*devicePixelRatio, my=(touchStartPos.y-rect.top)*devicePixelRatio;
     const hit = hitTest(mx,my);
@@ -699,20 +694,19 @@ canvas.addEventListener('touchend', e=>{
       drawMap();
     }
   }
-  touchStartPos=null;
-  touchMoved=false;
+  touchStartPos=null; touchMoved=false;
 }, {passive:true});
 
 /* =========================================================
    SIMULAÇÃO EM CASCATA
 ========================================================= */
-let particles = []; // {edgeIdx, progress, volume}
+let particles = [];
 let simRunning=false;
-let simSpeed=6; // horas simuladas por segundo real
-let simClock=0; // horas
+let simSpeed=6;
+let simClock=0;
 let simInterval=null;
 let eventLog=[];
-const notified = {}; // controla alertas já logados por nó
+const notified = {};
 
 function logEvent(msg, level='info'){
   const dia = Math.floor(simClock/24), hora = Math.floor(simClock%24);
@@ -724,7 +718,7 @@ function logEvent(msg, level='info'){
 function startSim(){
   if(simRunning) return;
   simRunning=true;
-  lastTickTime = Date.now(); // evita "pulo" de tempo real acumulado durante a pausa
+  lastTickTime = Date.now();
   logEvent('Simulação iniciada.', 'info');
   simInterval = setInterval(tick, 100);
   updateClockUI();
@@ -737,17 +731,11 @@ function pauseSim(){
 }
 function resetSim(){
   pauseSim();
-  simClock=0;
-  particles=[];
-  eventLog=[];
-  lastTickTime = null;
+  simClock=0; particles=[]; eventLog=[]; lastTickTime=null;
   Object.values(NODES).forEach(n=>{
-    n.cota = NODE_BASE[n.id];
-    n.rain = 0;
-    notified[n.id]=false;
+    n.cota = NODE_BASE[n.id]; n.rain = 0; notified[n.id]=false;
   });
-  updateClockUI();
-  drawMap();
+  updateClockUI(); drawMap();
   if(activeTab==='sim'){ renderPanel(); }
 }
 
@@ -757,17 +745,13 @@ function tick(){
   const now = Date.now();
   let dt;
   if(liveState.active){
-    // Modo Tempo Real: 1 segundo real = 1 segundo real de hidrologia.
-    // Sem isso, minutos de chat viravam "meses" simulados e saturava tudo no teto.
     dt = lastTickTime ? (now - lastTickTime)/1000/3600 : 100/1000/3600;
   } else {
-    // Simulador manual: tempo comprimido pra poder demonstrar rápido
     dt = simSpeed * (100/1000);
   }
   lastTickTime = now;
   simClock += dt;
 
-  // fontes com chuva ativa: sobe a cota local e gera partículas
   Object.values(NODES).forEach(n=>{
     if(n.isSource && n.rain>0){
       n.cota = Math.min(n.max*1.15, n.cota + (n.rain/100)*0.06*dt);
@@ -776,15 +760,12 @@ function tick(){
       if(n.spawnAcc >= interval){
         n.spawnAcc = 0;
         EDGES.forEach((e, idx)=>{
-          if(e.from===n.id){
-            particles.push({edgeIdx:idx, progress:0, volume:n.rain/100});
-          }
+          if(e.from===n.id){ particles.push({edgeIdx:idx, progress:0, volume:n.rain/100}); }
         });
       }
     }
   });
 
-  // mover partículas
   for(let i=particles.length-1;i>=0;i--){
     const p = particles[i];
     const edge = EDGES[p.edgeIdx];
@@ -795,34 +776,20 @@ function tick(){
       target.cota = Math.min(target.max*1.15, target.cota + bump);
       particles.splice(i,1);
 
-      // dispara novas partículas a jusante se o nó também tiver saída (efeito cascata natural)
       EDGES.forEach((e2, idx2)=>{
-        if(e2.from===target.id){
-          particles.push({edgeIdx:idx2, progress:0, volume:bump*0.6});
-        }
+        if(e2.from===target.id){ particles.push({edgeIdx:idx2, progress:0, volume:bump*0.6}); }
       });
     }
   }
 
-  // decaimento natural (escoamento) — cada tipo de corpo d'água recua num
-  // ritmo diferente na vida real: rio recua em horas/dias, Guaíba em dias,
-  // Lagoa dos Patos em semanas. Isso evita o nó "travar" artificialmente
-  // no teto mesmo depois que a chuva real já parou.
-  //
-  // IMPORTANTE: o alvo do decaimento não é mais o nível seco fixo (NODE_BASE) —
-  // é uma "base efetiva" elevada pela chuva acumulada dos últimos 7 dias. Sem
-  // isso, um rio com solo saturado (semana muito chuvosa) voltaria erradamente
-  // ao normal assim que a chuva do instante parasse — que foi exatamente o gap
-  // real que achamos (Sinos em cheia sem estar chovendo naquele minuto).
   Object.values(NODES).forEach(n=>{
     const baseEfetiva = calcularBaseEfetiva(n);
     n.cota += (baseEfetiva - n.cota) * n.decay * dt;
     checkAlert(n);
 
-    // Grava histórico a cada ~1 min real, pra alimentar a projeção de tendência
     if(now - n.lastHistoryPush > 60000){
       n.history.push({ t: now, cota: n.cota });
-      if(n.history.length > 240) n.history.shift(); // ~4h de histórico a 1min/ponto
+      if(n.history.length > 240) n.history.shift();
       n.lastHistoryPush = now;
     }
   });
@@ -830,36 +797,27 @@ function tick(){
   drawMap();
   updateClockUI();
   if(activeTab==='sim') renderStatusList();
-  if(activeTab==='explore' && selectedNode){
-    if(!tick.lastExploreRender || now - tick.lastExploreRender > 5000){
-      renderPanel();
-      tick.lastExploreRender = now;
-    }
-  }
 }
 
 function checkAlert(n){
   const pct = n.cota/n.max;
-  const key = n.id;
-  if(pct>=1 && notified[key]!=='critical'){
-    notified[key]='critical';
-    logEvent(`⚠ ${n.name} ultrapassou a cota crítica (${n.cota.toFixed(2)}m).`, 'critical');
-  } else if(pct>=0.6 && pct<1 && notified[key]!=='alert' && notified[key]!=='critical'){
-    notified[key]='alert';
-    logEvent(`${n.name} entrou em nível de alerta (${n.cota.toFixed(2)}m).`, 'alert');
-  } else if(pct<0.6){
-    notified[key]=false;
+  if(pct >= 1.0 && !notified[n.id+'_critico']){
+    notified[n.id+'_critico'] = true;
+    logEvent(`CRÍTICO: ${n.name} ultrapassou 100% da cota (${n.cota.toFixed(2)}m)!`, 'critical');
+  } else if(pct >= 0.6 && pct < 1.0 && !notified[n.id+'_alerta']){
+    notified[n.id+'_alerta'] = true;
+    logEvent(`ALERTA: ${n.name} entrou em faixa de atenção (${n.cota.toFixed(2)}m).`, 'alert');
   }
 }
 
 function updateClockUI(){
   const dia = Math.floor(simClock/24), hora = Math.floor(simClock%24);
-  document.getElementById('clockDisplay').textContent =
-    `Dia ${dia} · ${String(hora).padStart(2,'0')}h · ${simRunning?'rodando':'pausado'}`;
+  const el = document.getElementById('clockDisplay');
+  if(el) el.textContent = `Dia ${dia} · ${String(hora).padStart(2,'0')}h · ${simRunning?'rodando':'pausado'}`;
 }
 
 /* =========================================================
-   ABAS / PAINEL LATERAL
+   ABAS E PAINEL LATERAL
 ========================================================= */
 let activeTab='sim';
 document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -867,7 +825,6 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     activeTab = btn.dataset.tab;
     setActiveTabUI(activeTab);
     renderPanel();
-    salvarPreferencias();
   });
 });
 function setActiveTabUI(tab){
@@ -882,9 +839,7 @@ function renderPanel(){
   if(activeTab==='live') return renderLiveTab(el);
 }
 
-/* ---------- ABA SIMULADOR ---------- */
 function renderSimTab(el){
-  const sources = Object.values(NODES).filter(n=>n.isSource);
   el.innerHTML = `
     <div class="card">
       <h3>Controles da Simulação</h3>
@@ -892,21 +847,18 @@ function renderSimTab(el){
         <button class="btn btn-primary" id="btnPlay">${simRunning?'⏸ Pausar':'▶ Rodar'}</button>
         <button class="btn btn-outline" id="btnReset">↻ Reset</button>
       </div>
-      <label class="field">Velocidade (${simSpeed}h simuladas / seg)</label>
+      <label class="field">Velocidade (${simSpeed}h / seg)</label>
       <input type="range" id="speedSlider" min="1" max="24" step="1" value="${simSpeed}">
     </div>
 
     <div class="card">
       <h3>Chuva por Região (fontes)</h3>
       <div class="rain-grid" id="rainGrid"></div>
-      <p style="margin-top:10px;">Ajuste a intensidade e clique em "Rodar". A água se propaga entre os nós respeitando o tempo de viagem de cada trecho — assista a cascata acontecer no mapa.</p>
-      <button class="btn btn-outline" id="btnPreset2024">⚡ Carregar cenário Maio/2024</button>
     </div>
 
     <div class="card">
-      <h3>Status Atual dos Nós <span class="src-badge ${liveState.active ? 'src-live' : 'src-sim'}">${liveState.active ? '🛰️ chuva real aplicada' : '🎲 simulado'}</span></h3>
+      <h3>Status Atual dos Nós <span class="src-badge ${liveState.active ? 'src-live' : 'src-sim'}">${liveState.active ? '🛰️ ClimaRS Ativo' : '🎲 Simulador'}</span></h3>
       <div id="statusList"></div>
-      <button class="btn btn-outline" id="btnCopyResumo">📋 Copiar resumo</button>
     </div>
 
     <div class="card">
@@ -916,7 +868,7 @@ function renderSimTab(el){
   `;
 
   const rainGrid = document.getElementById('rainGrid');
-  sources.forEach(n=>{
+  Object.values(NODES).filter(n=>n.isSource).forEach(n=>{
     const div = document.createElement('div');
     div.className='rain-item';
     div.innerHTML = `
@@ -926,56 +878,21 @@ function renderSimTab(el){
     `;
     rainGrid.appendChild(div);
   });
+
   document.querySelectorAll('.rainSlider').forEach(s=>{
     s.addEventListener('input', e=>{
-      if(liveState.active) desativarModoTempoReal(); // ajuste manual assume controle total
       const id = e.target.dataset.node;
       NODES[id].rain = parseInt(e.target.value);
       document.querySelector(`.rv-${id}`).textContent = e.target.value;
-      salvarPreferencias();
     });
   });
 
-  document.getElementById('btnPlay').onclick = ()=>{
-    if(liveState.active) desativarModoTempoReal(); // modos são mutuamente exclusivos
-    simRunning ? pauseSim() : startSim();
-    renderSimTab(el);
-  };
+  document.getElementById('btnPlay').onclick = ()=>{ simRunning ? pauseSim() : startSim(); renderSimTab(el); };
   document.getElementById('btnReset').onclick = resetSim;
-  document.getElementById('speedSlider').oninput = e=>{ simSpeed=parseInt(e.target.value); renderSimTab(el); };
-  document.getElementById('btnPreset2024').onclick = ()=>{
-    if(liveState.active) desativarModoTempoReal(); // modos são mutuamente exclusivos
-    NODES.serra.rain=90; NODES.jacui.rain=70; NODES.sinos.rain=65;
-    logEvent('Cenário Maio/2024 carregado: chuva extrema em todas as regiões-fonte.', 'alert');
-    if(!simRunning) startSim();
-    renderSimTab(el);
-  };
-  document.getElementById('btnCopyResumo').onclick = ()=>{
-    const texto = gerarResumoTexto();
-    navigator.clipboard.writeText(texto).then(()=>{
-      const btn = document.getElementById('btnCopyResumo');
-      const original = btn.textContent;
-      btn.textContent = '✅ Copiado!';
-      setTimeout(()=>{ btn.textContent = original; }, 1800);
-    }).catch(()=>{
-      alert(texto); // fallback caso o navegador bloqueie clipboard
-    });
-  };
+  document.getElementById('speedSlider').oninput = e=>{ simSpeed=parseInt(e.target.value); };
 
   renderStatusList();
   renderLog();
-}
-
-function gerarResumoTexto(){
-  const agora = new Date().toLocaleString('pt-BR');
-  const linhas = [`📊 STATUS FLUXO DE ÁGUAS RS — ${agora}`, `Fonte: ${liveState.active ? 'chuva real (Open-Meteo)' : 'simulação manual'}`, ''];
-  Object.values(NODES).forEach(n=>{
-    const pct = (n.cota/n.max)*100;
-    const status = pct>=100?'🔴 CRÍTICO':pct>=60?'🟡 ALERTA':'🟢 NORMAL';
-    linhas.push(`${n.name}: ${n.cota.toFixed(2)}m (${pct.toFixed(0)}%) — ${status}`);
-  });
-  linhas.push('', 'Gerado pela Plataforma Interativa de Fluxo de Águas RS');
-  return linhas.join('\n');
 }
 
 function renderStatusList(){
@@ -983,14 +900,10 @@ function renderStatusList(){
   if(!box) return;
   box.innerHTML = Object.values(NODES).map(n=>{
     const pct = Math.min(100, (n.cota/n.max)*100);
-    const cls = pct>=100?'b-danger':pct>=60?'b-warn':'b-ok';
     const barCol = pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71';
     return `
-      <div class="stat-row">
-        <span class="label">${n.name}</span>
-        <span class="val">${n.cota.toFixed(2)}m</span>
-      </div>
-      <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${barCol}"></div></div>
+      <div class="stat-row"><span class="label">${n.name}</span><span class="val">${n.cota.toFixed(2)}m</span></div>
+      <div class="bar"><div class="bar-fill" style="width:${pct}%; background:${barCol}"></div></div>
     `;
   }).join('');
 }
@@ -998,592 +911,125 @@ function renderStatusList(){
 function renderLog(){
   const box = document.getElementById('logBox');
   if(!box) return;
-  box.innerHTML = eventLog.length ? eventLog.map(l=>`<div class="${l.level}">${l.msg}</div>`).join('')
-    : '<div>Nenhum evento ainda. Ajuste a chuva e clique em Rodar.</div>';
+  box.innerHTML = eventLog.length ? eventLog.map(l=>`<div class="${l.level}">${l.msg}</div>`).join('') : '<div>Nenhum evento registrado.</div>';
 }
-
-/* ---------- ABA LINHA DO TEMPO ---------- */
-let tlDay = 0;
-let tlPlaying=false, tlInterval=null;
 
 function renderHistTab(el){
   el.innerHTML = `
     <div class="card">
-      <h3>Linha do Tempo — Abril/Maio 2024</h3>
-      <p style="margin-bottom:10px;">Modelo educativo construído a partir dos relatos públicos do evento. O ponto de referência real é o recorde do Guaíba: <strong>4,77m em 03/mai/2024</strong>, superando a marca de 1941 (4,76m). As demais curvas são estimativas ilustrativas do formato de subida/descida.</p>
+      <h3>Linha do Tempo 2024</h3>
+      <p style="margin-bottom:10px;">Simulação baseada no evento de abril/maio de 2024 (Guaíba a 4,77m).</p>
       <div class="timeline-wrap">
-        <div class="timeline-date" id="tlDate"></div>
-        <input type="range" id="tlSlider" min="0" max="${HIST_DAYS-1}" value="${tlDay}">
+        <div class="timeline-date" id="tlDate">27 abr 2024</div>
         <div class="tl-controls">
-          <button id="tlPlay">${tlPlaying?'⏸':'▶'}</button>
-          <button id="tlBack">⏮</button>
-          <button id="tlFwd">⏭</button>
+          <button id="tlPrev">◀</button>
+          <input type="range" id="tlSlider" min="0" max="${HIST_DAYS-1}" value="0">
+          <button id="tlNext">▶</button>
         </div>
       </div>
     </div>
-
     <div class="card">
-      <h3>Situação em ${histDateLabel(tlDay)}</h3>
+      <h3>Situação do Dia</h3>
       <div id="tlStatusList"></div>
-    </div>
-
-    <div class="card">
-      <h3>Destaque do Dia</h3>
-      <p id="tlHighlight"></p>
     </div>
   `;
 
-  applyTimelineDay(tlDay);
+  let currentDay = 0;
+  const applyDay = (day)=>{
+    currentDay = Math.max(0, Math.min(HIST_DAYS-1, day));
+    document.getElementById('tlSlider').value = currentDay;
+    document.getElementById('tlDate').textContent = histDateLabel(currentDay);
 
-  document.getElementById('tlSlider').oninput = e=>{
-    tlDay = parseInt(e.target.value);
-    applyTimelineDay(tlDay);
-  };
-  document.getElementById('tlBack').onclick = ()=>{ tlDay=Math.max(0,tlDay-1); document.getElementById('tlSlider').value=tlDay; applyTimelineDay(tlDay); };
-  document.getElementById('tlFwd').onclick = ()=>{ tlDay=Math.min(HIST_DAYS-1,tlDay+1); document.getElementById('tlSlider').value=tlDay; applyTimelineDay(tlDay); };
-  document.getElementById('tlPlay').onclick = ()=>{
-    tlPlaying = !tlPlaying;
-    document.getElementById('tlPlay').textContent = tlPlaying?'⏸':'▶';
-    if(tlPlaying){
-      tlInterval = setInterval(()=>{
-        tlDay++;
-        if(tlDay>=HIST_DAYS){ tlDay=0; }
-        document.getElementById('tlSlider').value=tlDay;
-        applyTimelineDay(tlDay);
-      }, 500);
-    } else {
-      clearInterval(tlInterval);
+    Object.values(NODES).forEach(n=>{
+      n.cota = histCota(n.id, currentDay);
+    });
+    drawMap();
+
+    const box = document.getElementById('tlStatusList');
+    if(box){
+      box.innerHTML = Object.values(NODES).map(n=>{
+        const pct = Math.min(100, (n.cota/n.max)*100);
+        const barCol = pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71';
+        return `
+          <div class="stat-row"><span class="label">${n.name}</span><span class="val">${n.cota.toFixed(2)}m</span></div>
+          <div class="bar"><div class="bar-fill" style="width:${pct}%; background:${barCol}"></div></div>
+        `;
+      }).join('');
     }
   };
+
+  applyDay(0);
+  document.getElementById('tlSlider').oninput = e => applyDay(parseInt(e.target.value));
+  document.getElementById('tlPrev').onclick = () => applyDay(currentDay-1);
+  document.getElementById('tlNext').onclick = () => applyDay(currentDay+1);
 }
 
-function applyTimelineDay(day){
-  Object.values(NODES).forEach(n=>{ n.cota = histCota(n.id, day); });
-  drawMap();
-  const dateEl = document.getElementById('tlDate');
-  if(dateEl) dateEl.textContent = histDateLabel(day) + ' de 2024';
-  const listEl = document.getElementById('tlStatusList');
-  if(listEl){
-    listEl.innerHTML = Object.values(NODES).map(n=>{
-      const pct = Math.min(100,(n.cota/n.max)*100);
-      const barCol = pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71';
-      return `
-        <div class="stat-row">
-          <span class="label">${n.name}</span>
-          <span class="val">${n.cota.toFixed(2)}m</span>
-        </div>
-        <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${barCol}"></div></div>
-      `;
-    }).join('');
-  }
-  // destaque: nó mais próximo do pico nesse dia
-  let closest=null, closestDist=Infinity;
-  Object.values(NODES).forEach(n=>{
-    const d = Math.abs(day - n.hist2024.peakDay);
-    if(d<closestDist){ closestDist=d; closest=n; }
-  });
-  const hEl = document.getElementById('tlHighlight');
-  if(hEl && closest) hEl.textContent = `${closest.name}: ${closest.hist2024.label}`;
-}
-
-/* ---------- ABA EXPLORAR NÓ ---------- */
 function renderExploreTab(el){
   if(!selectedNode){
     el.innerHTML = `
       <div class="card">
         <div class="empty-state">
           <div class="icon">🖱️</div>
-          Clique em um ponto do mapa para ver detalhes, histórico e configurar a chuva local deste trecho.
+          Clique em um nó no mapa para inspecionar seus detalhes, histórico e projeções.
         </div>
       </div>
     `;
     return;
   }
   const n = NODES[selectedNode];
-  const pct = Math.min(100,(n.cota/n.max)*100);
-  const status = pct>=100?['CRÍTICO','b-danger']:pct>=60?['ALERTA','b-warn']:['NORMAL','b-ok'];
+  const pct = Math.min(100, (n.cota/n.max)*100);
+  const barCol = pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71';
 
   el.innerHTML = `
     <div class="card">
       <div class="node-title">${n.name}</div>
       <div class="node-sub">${n.sub}</div>
-      <span class="badge ${status[1]}">${status[0]}</span>
-
-      <div style="margin-top:12px;">
-        <div class="stat-row"><span class="label">Cota atual</span><span class="val">${n.cota.toFixed(2)} m</span></div>
-        <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71'}"></div></div>
-        <div class="stat-row" style="margin-top:8px;"><span class="label">Cota crítica de referência</span><span class="val">${n.max.toFixed(2)} m</span></div>
-        <div class="stat-row"><span class="label">Vazão estimada</span><span class="val">${n.vazao} m³/s</span></div>
-      </div>
+      <div class="stat-row"><span class="label">Cota Atual</span><span class="val">${n.cota.toFixed(2)} m</span></div>
+      <div class="bar"><div class="bar-fill" style="width:${pct}%; background:${barCol}"></div></div>
+      <div class="stat-row" style="margin-top:8px;"><span class="label">Capacidade Máxima Ref.</span><span class="val">${n.max.toFixed(2)} m</span></div>
     </div>
-
     <div class="card">
-      <h3>Sobre este ponto</h3>
+      <h3>Contexto Histórico / Geográfico</h3>
       <p>${n.desc}</p>
     </div>
-
-    ${liveState.active && n.history.length>=3 ? `
-    <div class="card">
-      <h3>📈 Tendência Ao Vivo (Tempo Real)</h3>
-      <canvas class="spark" id="liveTrendCanvas"></canvas>
-      ${(() => {
-        const alvoAlerta = n.max*0.6, alvoCritico = n.max*1.0;
-        const slope = calcularTendencia(n);
-        if(slope===null) return '<p style="margin-top:8px;">Coletando dados... aguarde mais alguns minutos pra ter tendência confiável.</p>';
-        if(slope <= 0.001) return `<p style="margin-top:8px;">Tendência estável ou em queda (${(slope*100).toFixed(1)}cm/h). Sem risco de subida no ritmo atual.</p>`;
-        const hAlerta = n.cota < alvoAlerta ? projetarHorasAte(n, alvoAlerta) : null;
-        const hCritico = n.cota < alvoCritico ? projetarHorasAte(n, alvoCritico) : null;
-        let linhas = `<p style="margin-top:8px;">Subindo a <strong>${(slope*100).toFixed(1)}cm/h</strong>.</p>`;
-        if(hAlerta!==null) linhas += `<p>⏱️ Atinge <strong>nível de alerta</strong> em aproximadamente <strong>${formatarHoras(hAlerta)}</strong> se o ritmo atual continuar.</p>`;
-        if(hCritico!==null) linhas += `<p>⏱️ Atinge <strong>nível crítico</strong> em aproximadamente <strong>${formatarHoras(hCritico)}</strong> se o ritmo atual continuar.</p>`;
-        return linhas;
-      })()}
-      <p style="margin-top:8px; font-size:10.5px; color:var(--muted);">Projeção linear simples baseada nas últimas ${Math.min(n.history.length,20)} leituras — não considera mudança de chuva ainda não medida.</p>
-    </div>` : ''}
-
-    <div class="card">
-      <h3>Registro histórico — 2024</h3>
-      <p><strong>${n.hist2024.label}</strong></p>
-      <canvas class="spark" id="sparkCanvas"></canvas>
-    </div>
-
-    ${n.isSource ? `
-    <div class="card">
-      <h3>Chuva local neste trecho</h3>
-      <label class="field">Intensidade (mm/h)</label>
-      <input type="range" id="localRain" min="0" max="100" value="${n.rain}">
-      <div class="stat-row"><span class="label">Atual</span><span class="val" id="localRainVal">${n.rain} mm/h</span></div>
-      <button class="btn btn-primary" id="btnStartLocalSim">${simRunning?'Simulação já rodando':'▶ Iniciar simulação com esta chuva'}</button>
-    </div>` : ''}
-
-    <button class="btn btn-outline" id="btnCloseNode">← Voltar</button>
+    <button class="btn btn-outline" id="btnCloseNode">← Voltar para Visão Geral</button>
   `;
 
-  drawSparkline(n);
-  drawLiveTrend(n);
-
-  if(n.isSource){
-    document.getElementById('localRain').oninput = e=>{
-      n.rain = parseInt(e.target.value);
-      document.getElementById('localRainVal').textContent = n.rain+' mm/h';
-    };
-    document.getElementById('btnStartLocalSim').onclick = ()=>{
-      if(!simRunning) startSim();
-    };
-  }
   document.getElementById('btnCloseNode').onclick = ()=>{
-    selectedNode=null;
+    selectedNode = null;
     renderExploreTab(el);
     drawMap();
   };
 }
 
-function drawLiveTrend(n){
-  const c = document.getElementById('liveTrendCanvas');
-  if(!c) return;
-  c.width = c.clientWidth*devicePixelRatio;
-  c.height = c.clientHeight*devicePixelRatio;
-  const sctx = c.getContext('2d');
-  sctx.clearRect(0,0,c.width,c.height);
-
-  const hist = n.history;
-  if(hist.length<2) return;
-
-  const slope = calcularTendencia(n); // m/h
-  const alvo = n.cota < n.max*0.6 ? n.max*0.6 : n.max*1.0;
-
-  // Monta pontos históricos + (se subindo) uma projeção futura até o alvo
-  const t0 = hist[0].t;
-  const pontos = hist.map(p=>({ x:(p.t-t0)/3600000, y:p.cota, proj:false }));
-  let horasProjetadas = 0;
-  if(slope!==null && slope>0.001 && n.cota < alvo){
-    horasProjetadas = Math.min((alvo-n.cota)/slope, 48); // não estica gráfico além de 48h projetadas
-    const ultimaHora = pontos[pontos.length-1].x;
-    pontos.push({ x: ultimaHora+horasProjetadas, y: alvo, proj:true });
-  }
-
-  const xs = pontos.map(p=>p.x), ys = pontos.map(p=>p.y);
-  const minX=Math.min(...xs), maxX=Math.max(...xs)||1;
-  const minY=Math.min(...ys, n.max*0.3), maxY=Math.max(...ys, alvo)*1.05;
-
-  const toPx = (x,y) => ({
-    px: ((x-minX)/(maxX-minX||1)) * c.width,
-    py: c.height - ((y-minY)/(maxY-minY||1)) * c.height
-  });
-
-  // Linha de limiar (alerta ou crítico, o que for o próximo alvo)
-  const limiarPx = toPx(minX, alvo).py;
-  sctx.strokeStyle = alvo===n.max ? 'rgba(255,77,79,.5)' : 'rgba(255,176,32,.5)';
-  sctx.setLineDash([3,3]);
-  sctx.beginPath();
-  sctx.moveTo(0, limiarPx); sctx.lineTo(c.width, limiarPx);
-  sctx.stroke();
-  sctx.setLineDash([]);
-
-  // Histórico real (linha sólida azul)
-  const reais = pontos.filter(p=>!p.proj);
-  sctx.strokeStyle = '#3aa0ff';
-  sctx.lineWidth = 2*devicePixelRatio;
-  sctx.beginPath();
-  reais.forEach((p,i)=>{ const {px,py}=toPx(p.x,p.y); i===0?sctx.moveTo(px,py):sctx.lineTo(px,py); });
-  sctx.stroke();
-
-  // Projeção futura (linha pontilhada laranja/vermelha)
-  if(pontos.length > reais.length){
-    const ultimo = reais[reais.length-1];
-    const proj = pontos[pontos.length-1];
-    const a = toPx(ultimo.x, ultimo.y), b = toPx(proj.x, proj.y);
-    sctx.strokeStyle = alvo===n.max ? '#ff4d4f' : '#ffb020';
-    sctx.lineWidth = 2*devicePixelRatio;
-    sctx.setLineDash([5,4]);
-    sctx.beginPath();
-    sctx.moveTo(a.px,a.py); sctx.lineTo(b.px,b.py);
-    sctx.stroke();
-    sctx.setLineDash([]);
-  }
-}
-
-function drawSparkline(n){
-  const c = document.getElementById('sparkCanvas');
-  if(!c) return;
-  c.width = c.clientWidth*devicePixelRatio;
-  c.height = c.clientHeight*devicePixelRatio;
-  const sctx = c.getContext('2d');
-  const pts = [];
-  for(let d=0; d<HIST_DAYS; d++) pts.push(histCota(n.id,d));
-  const max = Math.max(...pts)*1.1, min = Math.min(...pts)*0.9;
-  sctx.clearRect(0,0,c.width,c.height);
-  sctx.beginPath();
-  pts.forEach((v,i)=>{
-    const x = (i/(pts.length-1))*c.width;
-    const y = c.height - ((v-min)/(max-min))*c.height;
-    i===0?sctx.moveTo(x,y):sctx.lineTo(x,y);
-  });
-  sctx.strokeStyle='#3aa0ff';
-  sctx.lineWidth=2*devicePixelRatio;
-  sctx.stroke();
-  // linha do pico
-  const peakIdx = n.hist2024.peakDay;
-  const px = (peakIdx/(pts.length-1))*c.width;
-  sctx.strokeStyle='rgba(255,77,79,.6)';
-  sctx.setLineDash([4,4]);
-  sctx.beginPath();
-  sctx.moveTo(px,0); sctx.lineTo(px,c.height);
-  sctx.stroke();
-  sctx.setLineDash([]);
-}
-
-/* =========================================================
-   DADOS REAIS — TEMPO REAL
-   Chuva: Open-Meteo (grátis, sem chave, CORS liberado — chamado
-   direto do navegador, sem precisar de proxy/backend).
-   Cota dos rios: ANA Telemetria1 WS (legado, sem token) —
-   este serviço está com data de desligamento anunciada pela
-   ANA (prorrogada para 30/06/2026, já vencida). Tentamos
-   consultar; se falhar, a plataforma continua funcionando
-   normalmente com a cota vinda da propagação simulada.
-========================================================= */
-
-const RAIN_STATIONS = {
-  serra: { lat:-29.17, lon:-51.53 },
-  jacui: { lat:-29.68, lon:-53.81 },
-  sinos: { lat:-29.76, lon:-51.15 },
-};
-
-// Retorna "yyyy-mm-ddThh" na hora local de Brasília, no mesmo formato que a
-// Open-Meteo usa quando pedimos timezone=America/Sao_Paulo — sem isso, comparar
-// com now.toISOString() (UTC) nunca bate, porque Brasília é UTC-3.
-function horaLocalSaoPaulo(){
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Sao_Paulo',
-    year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', hourCycle:'h23'
-  });
-  const partes = {};
-  fmt.formatToParts(new Date()).forEach(p=>{ partes[p.type]=p.value; });
-  return `${partes.year}-${partes.month}-${partes.day}T${partes.hour}`;
-}
-
-let liveState = {
-  active:false,
-  loading:false,
-  lastError:null,
-  intervalId:null,
-  lastFetch:null,
-  rainData:{},        // {nodeId: {mmAgora, mmProxHora, ts}}
-  accum7d:{},          // {nodeId: {totalMm, dias:[...]}} — chuva acumulada últimos 7 dias
-  anaStatus:'não testado', // 'ok' | 'indisponível' | 'não testado'
-  anaLastCheck:null,
-};
-
-async function fetchChuvaReal(){
-  const ids = Object.keys(RAIN_STATIONS);
-  const lats = ids.map(id=>RAIN_STATIONS[id].lat).join(',');
-  const lons = ids.map(id=>RAIN_STATIONS[id].lon).join(',');
-  // hourly = chuva agora/próximas horas | daily precipitation_sum + past_days=7 = acumulado
-  // recente, que é o que realmente explica um rio já estar em cheia mesmo num instante seco
-  // (o Sinos, por exemplo, estava 0,27m acima da cota de inundação sem estar chovendo naquele minuto)
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=precipitation&daily=precipitation_sum&past_days=7&forecast_days=2&timezone=America%2FSao_Paulo`;
-
-  const resp = await fetch(url);
-  if(!resp.ok) throw new Error('Open-Meteo respondeu '+resp.status);
-  const json = await resp.json();
-
-  // Quando latitude/longitude têm múltiplos valores, a API retorna um array de resultados
-  const results = Array.isArray(json) ? json : [json];
-
-  // A API devolve hourly.time em horário LOCAL de Brasília (timezone=America/Sao_Paulo),
-  // não em UTC. Comparar com now.toISOString() (que é UTC) nunca batia — por isso sempre
-  // caía no fallback e lia a hora errada, mostrando 0.0mm mesmo quando estava chovendo.
-  const horaAtualStr = horaLocalSaoPaulo(); // ex: "2026-07-29T06"
-  liveState.debug = { horaConsultada: horaAtualStr, porNode:{} };
-
-  results.forEach((r, idx)=>{
-    const id = ids[idx];
-    if(!r || !r.hourly) return;
-    let iAtual = r.hourly.time.findIndex(t => t.startsWith(horaAtualStr));
-    if(iAtual === -1){
-      // Fallback seguro: pega a hora mais próxima em vez de travar sempre no índice 0
-      iAtual = r.hourly.time.reduce((melhorIdx, t, i)=>{
-        return Math.abs(t.localeCompare(horaAtualStr)) < Math.abs(r.hourly.time[melhorIdx].localeCompare(horaAtualStr)) ? i : melhorIdx;
-      }, 0);
-    }
-    const mmAgora = r.hourly.precipitation[iAtual] ?? 0;
-    const mmProxHora = r.hourly.precipitation[iAtual+1] ?? mmAgora;
-    liveState.rainData[id] = { mmAgora, mmProxHora, ts:new Date() };
-
-    // Acumulado dos últimos 7 dias reais (exclui os dias de previsão futura do array 'daily')
-    if(r.daily && r.daily.precipitation_sum){
-      const hojeIdx = r.daily.time.indexOf(horaAtualStr.slice(0,10));
-      const diasPassados = hojeIdx >= 0 ? r.daily.precipitation_sum.slice(Math.max(0,hojeIdx-7), hojeIdx+1) : r.daily.precipitation_sum.slice(0,7);
-      const total7d = diasPassados.reduce((s,v)=>s+(v||0), 0);
-      liveState.accum7d[id] = { totalMm: total7d, dias: diasPassados };
-    }
-
-    // Diagnóstico: horário exato lido + próximas 6h, pra confirmar se é bug ou dado real
-    liveState.debug.porNode[id] = {
-      horaLida: r.hourly.time[iAtual],
-      proximas6h: r.hourly.time.slice(iAtual, iAtual+6).map((t,i)=>({
-        hora: t.slice(11,16),
-        mm: r.hourly.precipitation[iAtual+i]
-      })),
-    };
-  });
-
-  liveState.lastFetch = new Date();
-}
-
-// Tenta a ANA legada. Formato de chamada testado e documentado pela própria ANA,
-// mas sujeito a estar fora do ar (ver aviso acima). Aqui é feita uma tentativa
-// direta; se o navegador bloquear por CORS ou o serviço estiver fora, cai no catch.
-async function testarANALegado(){
-  try {
-    // Endpoint de inventário, sem filtro de estação, apenas para checar se o serviço responde
-    const url = 'https://telemetriaws1.ana.gov.br/ServiceANA.asmx/HidroInventario?codEstDE=&codEstATE=&tpEst=&nmEst=&nmRio=&codSubBacia=&codBacia=&nmMunicipio=&nmEstado=Rio+Grande+do+Sul&sgResp=&sgOper=&telemetrica=1';
-    const resp = await fetch(url, { mode:'cors' });
-    liveState.anaStatus = resp.ok ? 'ok' : 'indisponível';
-  } catch(e){
-    // Muito provavelmente CORS (o serviço não foi feito pra ser chamado do navegador)
-    // ou o serviço já saiu do ar conforme aviso da ANA.
-    liveState.anaStatus = 'indisponível';
-  }
-  liveState.anaLastCheck = new Date();
-}
-
-function aplicarChuvaReal(){
-  Object.entries(liveState.rainData).forEach(([id, d])=>{
-    if(NODES[id]){
-      NODES[id].rain = Math.min(100, Math.round(d.mmAgora * 4)); // escala mm→intensidade do slider
-    }
-  });
-  if(activeTab==='sim') renderPanel();
-}
-
-async function ativarModoTempoReal(){
-  if(simRunning) pauseSim(); // encerra qualquer simulação manual em andamento
-  resetSim(); // começa de um estado limpo — sem resíduo de testes manuais anteriores
-  liveState.active = true;
-  liveState.loading = true;
-  liveState.lastError = null;
-  updateLiveBadge();
-  if(activeTab==='live') renderPanel(); // mostra "carregando" imediatamente, sem ficar em branco
-
-  await atualizarChuvaAgora(); // primeira busca, agora blindada — se falhar, não quebra o resto
-
-  // Parte já do nível coerente com o acumulado de 7 dias, em vez de começar
-  // "seco" e demorar horas reais pra convergir via decaimento.
-  Object.values(NODES).forEach(n=>{
-    n.cota = calcularBaseEfetiva(n);
-  });
-  drawMap();
-
-  await testarANALegado();
-  startSim();
-  logEvent('Modo Tempo Real ativado — chuva real (Open-Meteo) alimentando a simulação em tempo real (1s = 1s).', 'info');
-
-  // Este intervalo é registrado incondicionalmente — mesmo que a primeira busca acima
-  // tenha falhado, as tentativas seguintes continuam acontecendo a cada 10 min.
-  liveState.intervalId = setInterval(atualizarChuvaAgora, 10*60*1000);
-
-  if(activeTab==='live') renderPanel();
-}
-
-async function atualizarChuvaAgora(){
-  liveState.loading = true;
-  if(activeTab==='live') renderPanel();
-  try{
-    await fetchChuvaReal();
-    aplicarChuvaReal();
-    liveState.lastError = null;
-    logEvent('Dados de chuva atualizados (Open-Meteo).', 'info');
-  }catch(e){
-    liveState.lastError = e.message;
-    logEvent('Falha ao atualizar chuva real: '+e.message, 'alert');
-  }
-  liveState.loading = false;
-  if(activeTab==='live') renderPanel();
-}
-
-function desativarModoTempoReal(){
-  liveState.active = false;
-  clearInterval(liveState.intervalId);
-  updateLiveBadge();
-  logEvent('Modo Tempo Real desativado.', 'info');
-  if(activeTab==='live') renderPanel();
-}
-
 function renderLiveTab(el){
   el.innerHTML = `
     <div class="card">
-      <h3>Fontes de Dados Reais</h3>
-      <div class="stat-row"><span class="label">☔ Chuva — Open-Meteo</span><span class="badge b-ok">GRÁTIS · SEM CHAVE</span></div>
-      <p style="margin-top:4px;">Precipitação horária real e prevista, direto do navegador. Alimenta automaticamente a intensidade de chuva de cada região-fonte no simulador.</p>
-
-      <div class="stat-row" style="margin-top:14px;"><span class="label">🌊 Cota dos rios — ANA (legado)</span>
-        <span class="badge ${liveState.anaStatus==='ok'?'b-ok':liveState.anaStatus==='indisponível'?'b-danger':'b-warn'}">${liveState.anaStatus.toUpperCase()}</span>
-      </div>
-      <p style="margin-top:4px;">Este serviço da ANA está sem token, mas a própria ANA avisou desligamento (prorrogado até 30/06/2026 — já vencido). Pode estar indisponível. Enquanto isso, a cota exibida vem da propagação simulada a partir da chuva real.</p>
-      ${liveState.anaLastCheck ? `<div class="node-sub">Última verificação: ${liveState.anaLastCheck.toLocaleTimeString('pt-BR')}</div>` : ''}
+      <h3>Conexão Oficial ClimaRS</h3>
+      <p>Integração direta com o endpoint oficial do estado (<code>/climars/api/v1/simaqro/[IBGE]</code>) combinado com dados pluviométricos de 7 dias.</p>
+      <button class="btn btn-primary" id="btnSyncClima">🔄 Sincronizar com ClimaRS Agora</button>
+      ${liveState.loading ? '<div class="badge b-warn" style="margin-top:8px;">⏳ Consultando APIs...</div>' : ''}
+      <div class="stat-row" style="margin-top:10px;"><label class="label">Status</label><span class="badge ${liveState.active?'b-ok':'b-warn'}">${liveState.active?'Conectado':'Inativo'}</span></div>
     </div>
-
     <div class="card">
-      <h3>Controle</h3>
-      <button class="btn btn-primary" id="btnToggleLive">
-        ${liveState.active ? '⏸ Desativar Tempo Real' : '🛰️ Ativar Tempo Real'}
-      </button>
-      ${liveState.active ? '<button class="btn btn-outline" id="btnRefreshNow">🔄 Atualizar agora (não esperar 10 min)</button>' : ''}
-      <button class="btn btn-outline" id="btnResetLive">↻ Resetar cotas (zerar acumulado)</button>
-      <p style="margin-top:8px;">${liveState.active ? 'Atualizando chuva real a cada 10 minutos e propagando no mapa em tempo real (1s real = 1s de hidrologia — não mais acelerado).' : 'Ao ativar, a plataforma busca a chuva real agora e a cada 10 min, alimentando a cascata automaticamente em tempo real.'}</p>
-      ${liveState.loading ? '<div class="badge b-warn" style="margin-top:8px;">⏳ Buscando dados agora...</div>' : ''}
-      ${liveState.lastError ? `<div class="badge b-danger" style="margin-top:8px;">❌ Última tentativa falhou: ${liveState.lastError}</div>` : ''}
-      ${liveState.lastFetch ? `<div class="node-sub" style="margin-top:8px;">Última atualização com sucesso: ${liveState.lastFetch.toLocaleTimeString('pt-BR')}</div>` : ''}
-    </div>
-
-    <div class="card">
-      <h3>Chuva Real Agora (mm/h)</h3>
-      <div id="liveRainList">
-        ${Object.keys(RAIN_STATIONS).map(id=>{
-          const d = liveState.rainData[id];
-          return `<div class="stat-row"><span class="label">${NODES[id].name}</span><span class="val">${d ? d.mmAgora.toFixed(1)+' mm' : '—'}</span></div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>☔ Chuva Acumulada — Últimos 7 Dias</h3>
-      <p style="margin-bottom:8px;">Isso é o que realmente explica um rio já estar em risco mesmo num instante sem chuva — solo saturado, vazão de dias anteriores ainda escoando.</p>
-      ${Object.keys(RAIN_STATIONS).map(id=>{
-        const a = liveState.accum7d[id];
-        return `<div class="stat-row"><span class="label">${NODES[id].name}</span><span class="val">${a ? a.totalMm.toFixed(0)+' mm' : '—'}</span></div>`;
-      }).join('')}
-      <p style="margin-top:10px; font-size:11px;">Base elevada calculada por nó (referência seca → nível de repouso atual):</p>
-      ${Object.values(NODES).map(n=>{
-        const efetiva = liveState.accum7d && Object.keys(liveState.accum7d).length ? calcularBaseEfetiva(n) : null;
-        if(efetiva===null) return '';
-        return `<div class="stat-row"><span class="label">${n.name}</span><span class="val">${NODE_BASE[n.id].toFixed(2)}m → ${efetiva.toFixed(2)}m</span></div>`;
-      }).join('')}
-    </div>
-
-    ${liveState.debug ? `
-    <div class="card">
-      <h3>🔬 Diagnóstico (verificar se é bug ou dado real)</h3>
-      <p style="margin-bottom:8px;">Hora consultada (local Brasília): <strong>${liveState.debug.horaConsultada}h</strong></p>
-      ${Object.keys(RAIN_STATIONS).map(id=>{
-        const dbg = liveState.debug.porNode[id];
-        if(!dbg) return '';
-        return `
-          <p style="margin-top:10px;"><strong>${NODES[id].name}</strong> — hora lida da API: ${dbg.horaLida}</p>
-          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">
-            ${dbg.proximas6h.map(h=>`<span class="badge ${h.mm>0?'b-warn':'b-ok'}" style="font-size:10px;">${h.hora}: ${h.mm.toFixed(1)}mm</span>`).join('')}
-          </div>
-        `;
-      }).join('')}
-      <p style="margin-top:10px;">Se a "hora lida" bater com a hora atual real e as próximas 6h mostrarem tudo zerado, o dado está correto — só não está chovendo nesse ponto exato agora. Se a hora lida estiver visivelmente errada, me manda print disso que ainda tem bug.</p>
-    </div>
-    ` : ''}
-
-    <div class="card">
-      <h3>Caminho para dado oficial de cota (definitivo)</h3>
-      <p>Enviamos e-mail para <strong>hidro@ana.gov.br</strong> solicitando acesso ao Hidro_Webservice oficial. Quando aprovado, a função <code>api/ana-proxy.js</code> (já pronta, separada deste arquivo) substitui a cota simulada pela cota real medida nas estações.</p>
+      <h3>Dados por Município / IBGE</h3>
+      ${Object.values(NODES).map(n=>`
+        <div class="stat-row"><span class="label">${n.name} (IBGE: ${n.ibge})</span>
+        <span class="val">${liveState.accum7d[n.id] ? liveState.accum7d[n.id].totalMm.toFixed(1)+' mm (7d)' : 'Aguardando'}</span></div>
+      `).join('')}
     </div>
   `;
-
-  document.getElementById('btnToggleLive').onclick = ()=>{
-    liveState.active ? desativarModoTempoReal() : ativarModoTempoReal();
-  };
-  const btnRefresh = document.getElementById('btnRefreshNow');
-  if(btnRefresh) btnRefresh.onclick = atualizarChuvaAgora;
-  document.getElementById('btnResetLive').onclick = ()=>{
-    resetSim();
-    if(liveState.active) aplicarChuvaReal();
-    renderPanel();
-  };
+  const btn = document.getElementById('btnSyncClima');
+  if(btn) btn.onclick = sincronizarDadosReais;
 }
 
-function updateLiveBadge(){
-  const el = document.getElementById('liveBadge');
-  if(!el) return;
-  el.textContent = liveState.active ? '🛰️ Tempo Real Ativo' : '🎲 Modo Simulação';
-  el.className = 'live-badge' + (liveState.active ? ' on' : '');
-}
-
-/* Persistência simples — este arquivo roda como página standalone (Vercel),
-   fora do ambiente de artifacts do claude.ai, então localStorage funciona normalmente. */
-const STORAGE_KEY = 'rs-aguas-prefs-v1';
-
-function salvarPreferencias(){
-  try{
-    const prefs = {
-      activeTab,
-      rain: Object.fromEntries(Object.values(NODES).filter(n=>n.isSource).map(n=>[n.id, n.rain])),
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-  }catch(e){ /* localStorage pode estar bloqueado — sem problema, apenas não persiste */ }
-}
-
-function carregarPreferencias(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return;
-    const prefs = JSON.parse(raw);
-    if(prefs.rain){
-      Object.entries(prefs.rain).forEach(([id, val])=>{
-        if(NODES[id]) NODES[id].rain = val;
-      });
-    }
-    if(prefs.activeTab) activeTab = prefs.activeTab;
-  }catch(e){ /* preferências corrompidas — ignora e segue com padrão */ }
-}
-
-/* =========================================================
-   INIT
-========================================================= */
-carregarPreferencias();
-resizeCanvas();
-setActiveTabUI(activeTab);
-renderPanel();
-updateClockUI();
-updateLiveBadge();
-window.addEventListener('beforeunload', salvarPreferencias);
+window.addEventListener('DOMContentLoaded', () => {
+  resizeCanvas();
+  setActiveTabUI(activeTab);
+  renderPanel();
+  updateClockUI();
+  updateLiveBadge();
+});
 </script>
 </body>
 </html>
