@@ -146,14 +146,8 @@
   .bar{height:8px; border-radius:4px; background:#1c2740; overflow:hidden; margin:6px 0 2px;}
   .bar-fill{height:100%; border-radius:4px; transition:width .25s;}
 
-  canvas.spark{width:100%; height:60px; background:#0a1120; border-radius:6px; border:1px solid var(--line);}
-
   label.field{display:block; font-size:11px; color:var(--muted); margin-bottom:4px; margin-top:10px;}
   input[type=range]{width:100%; accent-color:var(--accent);}
-  input[type=number]{
-    width:100%; background:#0a1120; border:1px solid var(--line); color:var(--text);
-    padding:6px 8px; border-radius:6px; font-size:12px;
-  }
 
   .btn{
     width:100%; padding:9px; border-radius:6px; border:none; font-size:12px; font-weight:700;
@@ -163,8 +157,6 @@
   .btn-primary:hover{background:#5cb2ff;}
   .btn-outline{background:transparent; border:1px solid var(--line); color:var(--text);}
   .btn-outline:hover{border-color:var(--accent); color:var(--accent);}
-  .btn-danger{background:transparent; border:1px solid var(--danger); color:var(--danger);}
-  .btn-danger:hover{background:rgba(255,77,79,.1);}
 
   .rain-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
   .rain-item{background:#0a1120; border:1px solid var(--line); border-radius:6px; padding:8px;}
@@ -186,8 +178,6 @@
   .log div{color:var(--muted); margin-bottom:3px;}
   .log div.alert{color:var(--accent2);}
   .log div.critical{color:var(--danger); font-weight:700;}
-
-  .hidden{display:none !important;}
 
   .empty-state{text-align:center; color:var(--muted); font-size:12px; padding:30px 10px;}
   .empty-state .icon{font-size:30px; margin-bottom:10px;}
@@ -308,7 +298,7 @@ const EDGES = [
 
 const NODE_BASE = {};
 Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
-Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; });
+Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; n.spawnAcc = 0; });
 
 /* =========================================================
    ESTADO DA API E DADOS REAIS (CLIMARS)
@@ -733,7 +723,7 @@ function resetSim(){
   pauseSim();
   simClock=0; particles=[]; eventLog=[]; lastTickTime=null;
   Object.values(NODES).forEach(n=>{
-    n.cota = NODE_BASE[n.id]; n.rain = 0; notified[n.id]=false;
+    n.cota = NODE_BASE[n.id]; n.rain = 0; notified[n.id+'_critico']=false; notified[n.id+'_alerta']=false;
   });
   updateClockUI(); drawMap();
   if(activeTab==='sim'){ renderPanel(); }
@@ -884,6 +874,7 @@ function renderSimTab(el){
       const id = e.target.dataset.node;
       NODES[id].rain = parseInt(e.target.value);
       document.querySelector(`.rv-${id}`).textContent = e.target.value;
+      drawMap();
     });
   });
 
