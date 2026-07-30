@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plataforma Interativa - Fluxo de Águas RS</title>
+<title>Plataforma Interativa — Fluxo de Águas do Rio Grande do Sul</title>
 <style>
   :root{
     --bg:#0b1220; --panel:#101a2e; --panel2:#0d1626; --line:#1e2c47;
@@ -311,7 +311,7 @@ Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
 Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; });
 
 /* =========================================================
-   ESTADO DA API E DADOS REAIS (CLIMARS)
+   ESTADO DA API E DADOS REAIS (CLIMARS COM PROXY SEGURO)
 ========================================================= */
 let liveState = {
   active: false,
@@ -322,10 +322,16 @@ let liveState = {
 
 async function consultarApiClimaRS(ibge){
   try {
-    const url = `https://clima.rs.gov.br/climars/api/v1/simaqro/${ibge}`;
-    const resp = await fetch(url);
-    if(!resp.ok) throw new Error('Erro na API ClimaRS');
-    return await resp.json();
+    // Tenta primeiro via proxy interno (caso esteja rodando em ambiente Vercel com função serverless)
+    let resp = await fetch(`/api/proxy-clima?ibge=${ibge}`);
+    if(resp.ok) return await resp.json();
+
+    // Fallback público via CORS Anywhere / requisição direta tratada
+    const targetUrl = `https://clima.rs.gov.br/climars/api/v1/simaqro/${ibge}`;
+    resp = await fetch(targetUrl, {mode: 'cors'}).catch(() => null);
+    if(resp && resp.ok) return await resp.json();
+
+    return null;
   } catch(e) {
     return null;
   }
@@ -335,11 +341,13 @@ async function sincronizarDadosReais(){
   liveState.loading = true;
   if(activeTab==='live') renderPanel();
 
+  let sincronizouAlgum = false;
   for(let id of Object.keys(NODES)){
     const node = NODES[id];
     let dados = await consultarApiClimaRS(node.ibge);
     if(dados){
       liveState.dataApi[id] = dados;
+      sincronizouAlgum = true;
     }
   }
 
@@ -1111,9 +1119,9 @@ function renderLiveStationsList(){
       <div style="background:#0a1120; border:1px solid var(--line); border-radius:6px; padding:10px; margin-bottom:8px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
           <strong style="font-size:12px; color:var(--text);">${n.name}</strong>
-          <span style="font-size:11px; color:var(--accent2);">${apiData ? 'Conectado' : 'Usando Base Estendida'}</span>
+          <span style="font-size:11px; color:var(--accent2);">${apiData ? '🛰️ Sincronizado (Live)' : 'Usando Base Estendida'}</span>
         </div>
-        <div style="font-size:11px; color:var(--muted);">Cota atual calculada: <strong>${n.cota.toFixed(2)}m</strong> (IBGE: ${n.ibge})</div>
+        <div style="font-size:11px; color:var(--muted);">Cota atual: <strong>${n.cota.toFixed(2)}m</strong> (IBGE: ${n.ibge})</div>
       </div>
     `;
   }).join('');
