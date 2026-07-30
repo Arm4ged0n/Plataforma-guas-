@@ -146,8 +146,14 @@
   .bar{height:8px; border-radius:4px; background:#1c2740; overflow:hidden; margin:6px 0 2px;}
   .bar-fill{height:100%; border-radius:4px; transition:width .25s;}
 
+  canvas.spark{width:100%; height:60px; background:#0a1120; border-radius:6px; border:1px solid var(--line);}
+
   label.field{display:block; font-size:11px; color:var(--muted); margin-bottom:4px; margin-top:10px;}
   input[type=range]{width:100%; accent-color:var(--accent);}
+  input[type=number]{
+    width:100%; background:#0a1120; border:1px solid var(--line); color:var(--text);
+    padding:6px 8px; border-radius:6px; font-size:12px;
+  }
 
   .btn{
     width:100%; padding:9px; border-radius:6px; border:none; font-size:12px; font-weight:700;
@@ -157,6 +163,8 @@
   .btn-primary:hover{background:#5cb2ff;}
   .btn-outline{background:transparent; border:1px solid var(--line); color:var(--text);}
   .btn-outline:hover{border-color:var(--accent); color:var(--accent);}
+  .btn-danger{background:transparent; border:1px solid var(--danger); color:var(--danger);}
+  .btn-danger:hover{background:rgba(255,77,79,.1);}
 
   .rain-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
   .rain-item{background:#0a1120; border:1px solid var(--line); border-radius:6px; padding:8px;}
@@ -178,6 +186,8 @@
   .log div{color:var(--muted); margin-bottom:3px;}
   .log div.alert{color:var(--accent2);}
   .log div.critical{color:var(--danger); font-weight:700;}
+
+  .hidden{display:none !important;}
 
   .empty-state{text-align:center; color:var(--muted); font-size:12px; padding:30px 10px;}
   .empty-state .icon{font-size:30px; margin-bottom:10px;}
@@ -298,7 +308,7 @@ const EDGES = [
 
 const NODE_BASE = {};
 Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
-Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; n.spawnAcc = 0; });
+Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; });
 
 /* =========================================================
    ESTADO DA API E DADOS REAIS (CLIMARS)
@@ -723,7 +733,7 @@ function resetSim(){
   pauseSim();
   simClock=0; particles=[]; eventLog=[]; lastTickTime=null;
   Object.values(NODES).forEach(n=>{
-    n.cota = NODE_BASE[n.id]; n.rain = 0; notified[n.id+'_critico']=false; notified[n.id+'_alerta']=false;
+    n.cota = NODE_BASE[n.id]; n.rain = 0; notified[n.id]=false;
   });
   updateClockUI(); drawMap();
   if(activeTab==='sim'){ renderPanel(); }
@@ -873,232 +883,153 @@ function renderSimTab(el){
     s.addEventListener('input', e=>{
       const id = e.target.dataset.node;
       NODES[id].rain = parseInt(e.target.value);
-      const span = document.querySelector(`.rv-${id}`);
-      if(span) span.textContent = NODES[id].rain;
+      document.querySelector(`.rv-${id}`).textContent = e.target.value;
     });
   });
 
-  document.getElementById('btnPlay').onclick = ()=>{
-    if(simRunning) pauseSim(); else startSim();
-    renderSimTab(el);
-  };
-  document.getElementById('btnReset').onclick = ()=>{ resetSim(); };
-  
-  const speedSlider = document.getElementById('speedSlider');
-  if(speedSlider){
-    speedSlider.oninput = (e)=>{
-      simSpeed = parseInt(e.target.value);
-      e.target.previousElementSibling.textContent = `Velocidade (${simSpeed}h / seg)`;
-    };
-  }
+  document.getElementById('btnPlay').onclick = ()=>{ simRunning ? pauseSim() : startSim(); renderSimTab(el); };
+  document.getElementById('btnReset').onclick = resetSim;
+  document.getElementById('speedSlider').oninput = e=>{ simSpeed=parseInt(e.target.value); };
 
   renderStatusList();
   renderLog();
 }
 
 function renderStatusList(){
-  const container = document.getElementById('statusList');
-  if(!container) return;
-  container.innerHTML = Object.values(NODES).map(n=>{
-    const pct = Math.round((n.cota/n.max)*100);
-    const badgeClass = pct>=100 ? 'b-danger' : (pct>=60 ? 'b-warn' : 'b-ok');
-    const badgeText = pct>=100 ? 'CRÍTICO' : (pct>=60 ? 'ALERTA' : 'NORMAL');
+  const box = document.getElementById('statusList');
+  if(!box) return;
+  box.innerHTML = Object.values(NODES).map(n=>{
+    const pct = Math.min(100, (n.cota/n.max)*100);
+    const barCol = pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71';
     return `
-      <div style="margin-bottom:10px; cursor:pointer;" onclick="selectNodeFromPanel('${n.id}')">
-        <div class="stat-row">
-          <span class="label" style="font-weight:600; color:var(--text);">${n.name}</span>
-          <span class="badge ${badgeClass}">${badgeText} (${pct}%)</span>
-        </div>
-        <div class="stat-row">
-          <span class="label">Cota atual</span>
-          <span class="val" style="font-size:13px;">${n.cota.toFixed(2)}m / ${n.max}m</span>
-        </div>
-        <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${nodeColor(n)};"></div></div>
-      </div>
+      <div class="stat-row"><span class="label">${n.name}</span><span class="val">${n.cota.toFixed(2)}m</span></div>
+      <div class="bar"><div class="bar-fill" style="width:${pct}%; background:${barCol}"></div></div>
     `;
   }).join('');
-}
-
-function selectNodeFromPanel(id){
-  selectedNode = id;
-  activeTab='explore';
-  setActiveTabUI('explore');
-  renderPanel();
-  drawMap();
 }
 
 function renderLog(){
-  const logBox = document.getElementById('logBox');
-  if(!logBox) return;
-  logBox.innerHTML = eventLog.map(ev=>`<div class="${ev.level}">${ev.msg}</div>`).join('');
+  const box = document.getElementById('logBox');
+  if(!box) return;
+  box.innerHTML = eventLog.length ? eventLog.map(l=>`<div class="${l.level}">${l.msg}</div>`).join('') : '<div>Nenhum evento registrado.</div>';
 }
 
-let histDay = 5;
 function renderHistTab(el){
   el.innerHTML = `
     <div class="card">
-      <h3>🕒 Linha do Tempo • Maio de 2024</h3>
-      <p>Reconstituição diária baseada nos boletins oficiais da Defesa Civil e ANA durante o evento histórico.</p>
-      
-      <div style="margin-top:14px;" class="timeline-wrap">
-        <div class="timeline-date" id="histDateDisplay">${histDateLabel(histDay)} (Dia ${histDay})</div>
-        <div class="tl-controls" style="justify-content:center;">
-          <button id="histPrev">◀</button>
-          <input type="range" id="histSlider" min="0" max="${HIST_DAYS}" value="${histDay}" style="flex:1;">
-          <button id="histNext">▶</button>
+      <h3>Linha do Tempo 2024</h3>
+      <p style="margin-bottom:10px;">Simulação baseada no evento de abril/maio de 2024 (Guaíba a 4,77m).</p>
+      <div class="timeline-wrap">
+        <div class="timeline-date" id="tlDate">27 abr 2024</div>
+        <div class="tl-controls">
+          <button id="tlPrev">◀</button>
+          <input type="range" id="tlSlider" min="0" max="${HIST_DAYS-1}" value="0">
+          <button id="tlNext">▶</button>
         </div>
       </div>
     </div>
-
     <div class="card">
-      <h3>Níveis Reconstituidos no Dia</h3>
-      <div id="histNodesList"></div>
+      <h3>Situação do Dia</h3>
+      <div id="tlStatusList"></div>
     </div>
   `;
 
-  document.getElementById('histSlider').oninput = (e)=>{
-    histDay = parseInt(e.target.value);
-    updateHistView();
+  let currentDay = 0;
+  const applyDay = (day)=>{
+    currentDay = Math.max(0, Math.min(HIST_DAYS-1, day));
+    document.getElementById('tlSlider').value = currentDay;
+    document.getElementById('tlDate').textContent = histDateLabel(currentDay);
+
+    Object.values(NODES).forEach(n=>{
+      n.cota = histCota(n.id, currentDay);
+    });
+    drawMap();
+
+    const box = document.getElementById('tlStatusList');
+    if(box){
+      box.innerHTML = Object.values(NODES).map(n=>{
+        const pct = Math.min(100, (n.cota/n.max)*100);
+        const barCol = pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71';
+        return `
+          <div class="stat-row"><span class="label">${n.name}</span><span class="val">${n.cota.toFixed(2)}m</span></div>
+          <div class="bar"><div class="bar-fill" style="width:${pct}%; background:${barCol}"></div></div>
+        `;
+      }).join('');
+    }
   };
-  document.getElementById('histPrev').onclick = ()=>{
-    if(histDay>0){ histDay--; updateHistView(); }
-  };
-  document.getElementById('histNext').onclick = ()=>{
-    if(histDay<HIST_DAYS){ histDay++; updateHistView(); }
-  };
 
-  updateHistView();
-}
-
-function updateHistView(){
-  const dateEl = document.getElementById('histDateDisplay');
-  if(dateEl) dateEl.textContent = `${histDateLabel(histDay)} (Dia ${histDay} do Evento)`;
-  const slider = document.getElementById('histSlider');
-  if(slider) slider.value = histDay;
-
-  Object.keys(NODES).forEach(id=>{
-    NODES[id].cota = histCota(id, histDay);
-  });
-  drawMap();
-
-  const listEl = document.getElementById('histNodesList');
-  if(!listEl) return;
-  listEl.innerHTML = Object.values(NODES).map(n=>{
-    const cotaHist = histCota(n.id, histDay);
-    const pct = Math.round((cotaHist/n.max)*100);
-    return `
-      <div style="margin-bottom:10px;">
-        <div class="stat-row">
-          <span class="label" style="font-weight:600; color:var(--text);">${n.name}</span>
-          <span class="val" style="font-size:12px;">${cotaHist.toFixed(2)}m</span>
-        </div>
-        <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${nodeColor({cota:cotaHist, max:n.max})};"></div></div>
-      </div>
-    `;
-  }).join('');
+  applyDay(0);
+  document.getElementById('tlSlider').oninput = e => applyDay(parseInt(e.target.value));
+  document.getElementById('tlPrev').onclick = () => applyDay(currentDay-1);
+  document.getElementById('tlNext').onclick = () => applyDay(currentDay+1);
 }
 
 function renderExploreTab(el){
   if(!selectedNode){
     el.innerHTML = `
       <div class="card">
-        <h3>Explorar Nó</h3>
         <div class="empty-state">
-          <div class="icon">📍</div>
-          <p>Clique em um nó diretamente no mapa para inspecionar seus dados detalhados e previsões.</p>
+          <div class="icon">🖱️</div>
+          Clique em um nó no mapa para inspecionar seus detalhes, histórico e projeções.
         </div>
       </div>
     `;
     return;
   }
-
   const n = NODES[selectedNode];
-  const pct = Math.round((n.cota/n.max)*100);
-  const badgeClass = pct>=100 ? 'b-danger' : (pct>=60 ? 'b-warn' : 'b-ok');
-  const badgeText = pct>=100 ? 'CRÍTICO' : (pct>=60 ? 'ALERTA' : 'NORMAL');
+  const pct = Math.min(100, (n.cota/n.max)*100);
+  const barCol = pct>=100?'#ff4d4f':pct>=60?'#ffb020':'#2ecc71';
 
   el.innerHTML = `
     <div class="card">
       <div class="node-title">${n.name}</div>
-      <div class="node-sub">${n.sub} • IBGE: ${n.ibge}</div>
+      <div class="node-sub">${n.sub}</div>
+      <div class="stat-row"><span class="label">Cota Atual</span><span class="val">${n.cota.toFixed(2)} m</span></div>
+      <div class="bar"><div class="bar-fill" style="width:${pct}%; background:${barCol}"></div></div>
+      <div class="stat-row" style="margin-top:8px;"><span class="label">Capacidade Máxima Ref.</span><span class="val">${n.max.toFixed(2)} m</span></div>
+    </div>
+    <div class="card">
+      <h3>Contexto Histórico / Geográfico</h3>
       <p>${n.desc}</p>
     </div>
-
-    <div class="card">
-      <h3>Situação Hídrica</h3>
-      <div class="stat-row">
-        <span class="label">Cota Atual</span>
-        <span class="val">${n.cota.toFixed(2)} metros</span>
-      </div>
-      <div class="stat-row">
-        <span class="label">Cota Máxima Histórica</span>
-        <span class="val">${n.max} metros</span>
-      </div>
-      <div class="stat-row">
-        <span class="label">Status</span>
-        <span class="badge ${badgeClass}">${badgeText} (${pct}%)</span>
-      </div>
-      <div class="bar" style="margin-top:10px;"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${nodeColor(n)};"></div></div>
-    </div>
-
-    <div class="card">
-      <h3>Projeção de Tempo até Alerta / Crítico</h3>
-      <p style="font-size:11px; margin-bottom:8px;">Baseado na tendência recente de variação das cotas:</p>
-      <div class="stat-row">
-        <span class="label">Tempo até Alerta (60%)</span>
-        <span class="val">${formatarTempoAte(n, n.max*0.6)}</span>
-      </div>
-      <div class="stat-row">
-        <span class="label">Tempo até Crítico (100%)</span>
-        <span class="val">${formatarTempoAte(n, n.max)}</span>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Marco em 2024</h3>
-      <p style="color:var(--accent2); font-weight:600;">${n.hist2024.label}</p>
-      <p style="margin-top:4px;">Pico registrado: <strong>${n.hist2024.peak}m</strong></p>
-    </div>
+    <button class="btn btn-outline" id="btnCloseNode">← Voltar para Visão Geral</button>
   `;
-}
 
-function formatarTempoAte(n, alvo){
-  if(n.cota >= alvo) return 'Já atingido';
-  const h = projetarHorasAte(n, alvo);
-  if(h===null || h > 336) return 'Estável / Sem tendência de alta';
-  return formatarHoras(h);
+  document.getElementById('btnCloseNode').onclick = ()=>{
+    selectedNode = null;
+    renderExploreTab(el);
+    drawMap();
+  };
 }
 
 function renderLiveTab(el){
   el.innerHTML = `
     <div class="card">
-      <h3>🛰️ Integração com APIs Oficiais</h3>
-      <p>Conecte a plataforma aos dados telemétricos oficiais do <strong>ClimaRS</strong> e previsões meteorológicas do <strong>Open-Meteo</strong>.</p>
-      <button class="btn btn-primary" id="btnSyncLive" style="margin-top:12px;">
-        ${liveState.loading ? '⏳ Sincronizando...' : '🔄 Sincronizar Dados Reais'}
-      </button>
+      <h3>Conexão Oficial ClimaRS</h3>
+      <p>Integração direta com o endpoint oficial do estado (<code>/climars/api/v1/simaqro/[IBGE]</code>) combinado com dados pluviométricos de 7 dias.</p>
+      <button class="btn btn-primary" id="btnSyncClima">🔄 Sincronizar com ClimaRS Agora</button>
+      ${liveState.loading ? '<div class="badge b-warn" style="margin-top:8px;">⏳ Consultando APIs...</div>' : ''}
+      <div class="stat-row" style="margin-top:10px;"><label class="label">Status</label><span class="badge ${liveState.active?'b-ok':'b-warn'}">${liveState.active?'Conectado':'Inativo'}</span></div>
     </div>
-
     <div class="card">
-      <h3>Status da Conexão</h3>
-      <div class="stat-row">
-        <span class="label">Estado</span>
-        <span class="val" style="color:${liveState.active?'var(--ok)':'var(--muted)'};">${liveState.active?'Conectado':'Desconectado'}</span>
-      </div>
-      <div class="stat-row">
-        <span class="label">Fontes ativas</span>
-        <span class="val">ClimaRS API / Open-Meteo</span>
-      </div>
+      <h3>Dados por Município / IBGE</h3>
+      ${Object.values(NODES).map(n=>`
+        <div class="stat-row"><span class="label">${n.name} (IBGE: ${n.ibge})</span>
+        <span class="val">${liveState.accum7d[n.id] ? liveState.accum7d[n.id].totalMm.toFixed(1)+' mm (7d)' : 'Aguardando'}</span></div>
+      `).join('')}
     </div>
   `;
-
-  document.getElementById('btnSyncLive').onclick = async ()=>{
-    await sincronizarDadosReais();
-  };
+  const btn = document.getElementById('btnSyncClima');
+  if(btn) btn.onclick = sincronizarDadosReais;
 }
 
-resizeCanvas();
-renderPanel();
+window.addEventListener('DOMContentLoaded', () => {
+  resizeCanvas();
+  setActiveTabUI(activeTab);
+  renderPanel();
+  updateClockUI();
+  updateLiveBadge();
+});
 </script>
 </body>
 </html>
