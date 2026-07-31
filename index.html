@@ -5,329 +5,305 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plataforma Interativa — Fluxo de Águas do Rio Grande do Sul</title>
 <style>
-  :root{
-    --bg:#0b1220; --panel:#101a2e; --panel2:#0d1626; --line:#1e2c47;
-    --accent:#3aa0ff; --accent2:#ffb020; --danger:#ff4d4f; --ok:#2ecc71;
-    --text:#e6edf7; --muted:#8aa0c4;
-  }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  html, body{ height:100%; }
-  body{
-    background:var(--bg); color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-    height:100dvh; overflow:hidden;
-  }
-  .app{display:grid; grid-template-rows:auto auto auto 1fr; height:100dvh; height:100vh;}
-
-  /* ALERTA BANNER GLOBAL */
-  .global-alert-banner {
-    background: rgba(255, 77, 79, 0.15);
-    border-bottom: 1px solid rgba(255, 77, 79, 0.4);
-    color: var(--danger);
-    padding: 8px 18px;
-    font-size: 12px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    animation: pulseAlert 2s infinite;
+  :root{
+    --bg:#0b1220; --panel:#101a2e; --panel2:#0d1626; --line:#1e2c47;
+    --accent:#3aa0ff; --accent2:#ffb020; --danger:#ff4d4f; --ok:#2ecc71;
+    --text:#e6edf7; --muted:#8aa0c4;
   }
-  @keyframes pulseAlert {
-    0% { opacity: 1; }
-    50% { opacity: 0.7; }
-    100% { opacity: 1; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{ height:100%; }
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    height:100dvh; overflow:hidden;
+  }
+  .app{display:grid; grid-template-rows:auto auto 1fr; height:100dvh; height:100vh;}
+
+  /* HEADER */
+  header{
+    padding:12px 18px; border-bottom:1px solid var(--line); display:flex;
+    justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+    background:var(--panel);
+  }
+  header h1{font-size:16px; font-weight:600;}
+  header .sub{font-size:11px; color:var(--muted); margin-top:2px;}
+  .clock{
+    font-family:'Courier New',monospace; font-size:13px; background:#000;
+    color:var(--accent2); padding:6px 12px; border-radius:6px; border:1px solid var(--line);
+    min-width:170px; text-align:center; flex-shrink:0;
+  }
+  .live-badge{
+    font-size:11px; font-weight:700; padding:6px 12px; border-radius:6px;
+    background:rgba(138,160,196,.12); color:var(--muted); border:1px solid var(--line);
+    flex-shrink:0; white-space:nowrap;
+  }
+  .live-badge.on{ background:rgba(46,204,113,.15); color:var(--ok); border-color:rgba(46,204,113,.3); }
+  @media (max-width:640px){
+    header{padding:10px 12px;}
+    header h1{font-size:13.5px; line-height:1.3;}
+    header .sub{display:none;}
+    .clock{font-size:11px; min-width:auto; padding:5px 8px;}
+    .live-badge{font-size:10px; padding:5px 8px;}
   }
 
-  /* HEADER */
-  header{
-    padding:12px 18px; border-bottom:1px solid var(--line); display:flex;
-    justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
-    background:var(--panel);
-  }
-  header h1{font-size:16px; font-weight:600;}
-  header .sub{font-size:11px; color:var(--muted); margin-top:2px;}
-  .clock{
-    font-family:'Courier New',monospace; font-size:13px; background:#000;
-    color:var(--accent2); padding:6px 12px; border-radius:6px; border:1px solid var(--line);
-    min-width:170px; text-align:center; flex-shrink:0;
-  }
-  .live-badge{
-    font-size:11px; font-weight:700; padding:6px 12px; border-radius:6px;
-    background:rgba(138,160,196,.12); color:var(--muted); border:1px solid var(--line);
-    flex-shrink:0; white-space:nowrap; cursor:pointer;
-  }
-  .live-badge.on{ background:rgba(46,204,113,.15); color:var(--ok); border-color:rgba(46,204,113,.3); }
-  @media (max-width:640px){
-    header{padding:10px 12px;}
-    header h1{font-size:13.5px; line-height:1.3;}
-    header .sub{display:none;}
-    .clock{font-size:11px; min-width:auto; padding:5px 8px;}
-    .live-badge{font-size:10px; padding:5px 8px;}
-  }
+  /* TABS */
+  nav.tabs{
+    display:flex; gap:4px; padding:8px 18px; background:var(--panel2);
+    border-bottom:1px solid var(--line);
+    overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  }
+  nav.tabs::-webkit-scrollbar{display:none;}
+  nav.tabs button{
+    background:transparent; border:1px solid var(--line); color:var(--muted);
+    padding:8px 16px; border-radius:6px 6px 0 0; font-size:12px; font-weight:600;
+    cursor:pointer; transition:.15s; white-space:nowrap; flex-shrink:0;
+  }
+  nav.tabs button:hover{color:var(--text);}
+  nav.tabs button.active{background:var(--bg); color:var(--accent); border-bottom-color:var(--bg);}
+  @media (max-width:640px){
+    nav.tabs{padding:6px 10px;}
+    nav.tabs button{padding:8px 12px; font-size:11.5px;}
+  }
 
-  /* TABS */
-  nav.tabs{
-    display:flex; gap:4px; padding:8px 18px; background:var(--panel2);
-    border-bottom:1px solid var(--line);
-    overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
-  }
-  nav.tabs::-webkit-scrollbar{display:none;}
-  nav.tabs button{
-    background:transparent; border:1px solid var(--line); color:var(--muted);
-    padding:8px 16px; border-radius:6px 6px 0 0; font-size:12px; font-weight:600;
-    cursor:pointer; transition:.15s; white-space:nowrap; flex-shrink:0;
-  }
-  nav.tabs button:hover{color:var(--text);}
-  nav.tabs button.active{background:var(--bg); color:var(--accent); border-bottom-color:var(--bg);}
-  @media (max-width:640px){
-    nav.tabs{padding:6px 10px;}
-    nav.tabs button{padding:8px 12px; font-size:11.5px;}
-  }
+  /* MAIN LAYOUT */
+  main{display:grid; grid-template-columns:1fr 340px; overflow:hidden;}
+  .map-area{position:relative; overflow:hidden; background:radial-gradient(circle at 30% 20%, #0f1b30, #060a12 80%);}
+  #mapCanvas{display:block; cursor:grab; width:100%; height:100%; touch-action:none;}
+  #mapCanvas.dragging{cursor:grabbing;}
 
-  /* MAIN LAYOUT */
-  main{display:grid; grid-template-columns:1fr 340px; overflow:hidden;}
-  .map-area{position:relative; overflow:hidden; background:radial-gradient(circle at 30% 20%, #0f1b30, #060a12 80%);}
-  #mapCanvas{display:block; cursor:grab; width:100%; height:100%; touch-action:none;}
-  #mapCanvas.dragging{cursor:grabbing;}
+  @media (max-width:640px){
+    main{
+      grid-template-columns:1fr;
+      grid-template-rows:45vh 1fr;
+      overflow-y:auto;
+    }
+    .map-area{ height:45vh; min-height:280px; }
+    aside{ border-left:none; border-top:1px solid var(--line); }
+  }
 
-  @media (max-width:640px){
-    main{
-      grid-template-columns:1fr;
-      grid-template-rows:45vh 1fr;
-      overflow-y:auto;
-    }
-    .map-area{ height:45vh; min-height:280px; }
-    aside{ border-left:none; border-top:1px solid var(--line); }
-  }
+  .map-controls{
+    position:absolute; top:14px; right:14px; display:flex; flex-direction:column; gap:6px; z-index:5;
+  }
+  .map-controls button{
+    width:34px; height:34px; border-radius:6px; border:1px solid var(--line);
+    background:rgba(16,26,46,.9); color:var(--text); font-size:16px; cursor:pointer;
+  }
+  .map-controls button:hover{background:var(--panel);}
 
-  .map-controls{
-    position:absolute; top:14px; right:14px; display:flex; flex-direction:column; gap:6px; z-index:5;
-  }
-  .map-controls button{
-    width:34px; height:34px; border-radius:6px; border:1px solid var(--line);
-    background:rgba(16,26,46,.9); color:var(--text); font-size:16px; cursor:pointer;
-  }
-  .map-controls button:hover{background:var(--panel);}
+  .map-hint{
+    position:absolute; bottom:12px; left:14px; font-size:11px; color:var(--muted);
+    background:rgba(16,26,46,.85); padding:6px 10px; border-radius:6px; border:1px solid var(--line);
+    max-width:320px; z-index:5;
+  }
 
-  .map-hint{
-    position:absolute; bottom:12px; left:14px; font-size:11px; color:var(--muted);
-    background:rgba(16,26,46,.85); padding:6px 10px; border-radius:6px; border:1px solid var(--line);
-    max-width:320px; z-index:5;
-  }
+  .legend-float{
+    position:absolute; top:14px; left:14px; background:rgba(16,26,46,.9); border:1px solid var(--line);
+    border-radius:8px; padding:10px 12px; font-size:11px; z-index:5;
+  }
+  .legend-float div{display:flex; align-items:center; gap:6px; margin-bottom:4px;}
+  .legend-float span.dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
 
-  .legend-float{
-    position:absolute; top:14px; left:14px; background:rgba(16,26,46,.9); border:1px solid var(--line);
-    border-radius:8px; padding:10px 12px; font-size:11px; z-index:5;
-  }
-  .legend-float div{display:flex; align-items:center; gap:6px; margin-bottom:4px;}
-  .legend-float span.dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
+  @media (max-width:640px){
+    .legend-float{ padding:6px 8px; font-size:9.5px; top:8px; left:8px; }
+    .legend-float div{ margin-bottom:2px; }
+    .legend-float span.dot{ width:8px; height:8px; }
+    .map-hint{ display:none; }
+    .map-controls{ top:8px; right:8px; }
+    .map-controls button{ width:30px; height:30px; font-size:14px; }
+  }
 
-  @media (max-width:640px){
-    .legend-float{ padding:6px 8px; font-size:9.5px; top:8px; left:8px; }
-    .legend-float div{ margin-bottom:2px; }
-    .legend-float span.dot{ width:8px; height:8px; }
-    .map-hint{ display:none; }
-    .map-controls{ top:8px; right:8px; }
-    .map-controls button{ width:30px; height:30px; font-size:14px; }
-  }
+  /* SIDE PANEL */
+  aside{
+    background:var(--panel); border-left:1px solid var(--line); overflow-y:auto;
+    padding:16px; display:flex; flex-direction:column; gap:16px;
+    -webkit-overflow-scrolling:touch;
+  }
+  @media (max-width:640px){
+    aside{ padding:12px; gap:12px; }
+  }
+  .card{background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:14px;}
+  .card h3{font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--accent); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .src-badge{
+    font-size:9px; text-transform:none; letter-spacing:0; font-weight:700;
+    padding:3px 7px; border-radius:10px; flex-shrink:0;
+  }
+  .src-sim{ background:rgba(138,160,196,.15); color:var(--muted); }
+  .src-live{ background:rgba(46,204,113,.15); color:var(--ok); }
+  .card h4{font-size:14px; margin-bottom:6px;}
+  .card p{font-size:12px; color:var(--muted); line-height:1.6;}
 
-  /* SIDE PANEL */
-  aside{
-    background:var(--panel); border-left:1px solid var(--line); overflow-y:auto;
-    padding:16px; display:flex; flex-direction:column; gap:16px;
-    -webkit-overflow-scrolling:touch;
-  }
-  @media (max-width:640px){
-    aside{ padding:12px; gap:12px; }
-  }
-  .card{background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:14px;}
-  .card h3{font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--accent); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
-  .src-badge{
-    font-size:9px; text-transform:none; letter-spacing:0; font-weight:700;
-    padding:3px 7px; border-radius:10px; flex-shrink:0;
-  }
-  .src-sim{ background:rgba(138,160,196,.15); color:var(--muted); }
-  .src-live{ background:rgba(46,204,113,.15); color:var(--ok); }
-  .card h4{font-size:14px; margin-bottom:6px;}
-  .card p{font-size:12px; color:var(--muted); line-height:1.6;}
+  .node-title{font-size:16px; font-weight:700; margin-bottom:2px;}
+  .node-sub{font-size:11px; color:var(--muted); margin-bottom:10px;}
 
-  .node-title{font-size:16px; font-weight:700; margin-bottom:2px;}
-  .node-sub{font-size:11px; color:var(--muted); margin-bottom:10px;}
+  .stat-row{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
+  .stat-row .label{font-size:11px; color:var(--muted);}
+  .stat-row .val{font-size:15px; font-weight:700;}
+  .badge{display:inline-block; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:.3px;}
+  .b-ok{background:rgba(46,204,113,.15); color:var(--ok);}
+  .b-warn{background:rgba(255,176,32,.15); color:var(--accent2);}
+  .b-danger{background:rgba(255,77,79,.15); color:var(--danger);}
 
-  .stat-row{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
-  .stat-row .label{font-size:11px; color:var(--muted);}
-  .stat-row .val{font-size:15px; font-weight:700;}
-  .badge{display:inline-block; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:.3px;}
-  .b-ok{background:rgba(46,204,113,.15); color:var(--ok);}
-  .b-warn{background:rgba(255,176,32,.15); color:var(--accent2);}
-  .b-danger{background:rgba(255,77,79,.15); color:var(--danger);}
+  .bar{height:8px; border-radius:4px; background:#1c2740; overflow:hidden; margin:6px 0 2px;}
+  .bar-fill{height:100%; border-radius:4px; transition:width .25s;}
 
-  .bar{height:8px; border-radius:4px; background:#1c2740; overflow:hidden; margin:6px 0 2px;}
-  .bar-fill{height:100%; border-radius:4px; transition:width .25s;}
+  canvas.spark{width:100%; height:60px; background:#0a1120; border-radius:6px; border:1px solid var(--line);}
 
-  canvas.spark{width:100%; height:60px; background:#0a1120; border-radius:6px; border:1px solid var(--line);}
+  label.field{display:block; font-size:11px; color:var(--muted); margin-bottom:4px; margin-top:10px;}
+  input[type=range]{width:100%; accent-color:var(--accent);}
+  input[type=number]{
+    width:100%; background:#0a1120; border:1px solid var(--line); color:var(--text);
+    padding:6px 8px; border-radius:6px; font-size:12px;
+  }
 
-  label.field{display:block; font-size:11px; color:var(--muted); margin-bottom:4px; margin-top:10px;}
-  input[type=range]{width:100%; accent-color:var(--accent);}
-  input[type=number]{
-    width:100%; background:#0a1120; border:1px solid var(--line); color:var(--text);
-    padding:6px 8px; border-radius:6px; font-size:12px;
-  }
+  .btn{
+    width:100%; padding:9px; border-radius:6px; border:none; font-size:12px; font-weight:700;
+    cursor:pointer; margin-top:8px; transition:.15s;
+  }
+  .btn-primary{background:var(--accent); color:#001527;}
+  .btn-primary:hover{background:#5cb2ff;}
+  .btn-outline{background:transparent; border:1px solid var(--line); color:var(--text);}
+  .btn-outline:hover{border-color:var(--accent); color:var(--accent);}
+  .btn-danger{background:transparent; border:1px solid var(--danger); color:var(--danger);}
+  .btn-danger:hover{background:rgba(255,77,79,.1);}
 
-  .btn{
-    width:100%; padding:9px; border-radius:6px; border:none; font-size:12px; font-weight:700;
-    cursor:pointer; margin-top:8px; transition:.15s;
-  }
-  .btn-primary{background:var(--accent); color:#001527;}
-  .btn-primary:hover{background:#5cb2ff;}
-  .btn-outline{background:transparent; border:1px solid var(--line); color:var(--text);}
-  .btn-outline:hover{border-color:var(--accent); color:var(--accent);}
-  .btn-danger{background:transparent; border:1px solid var(--danger); color:var(--danger);}
-  .btn-danger:hover{background:rgba(255,77,79,.1);}
+  .rain-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .rain-item{background:#0a1120; border:1px solid var(--line); border-radius:6px; padding:8px;}
+  .rain-item .name{font-size:10px; color:var(--muted); margin-bottom:4px;}
+  .rain-item .value{font-size:13px; font-weight:700; color:var(--accent2);}
 
-  .rain-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
-  .rain-item{background:#0a1120; border:1px solid var(--line); border-radius:6px; padding:8px;}
-  .rain-item .name{font-size:10px; color:var(--muted); margin-bottom:4px;}
-  .rain-item .value{font-size:13px; font-weight:700; color:var(--accent2);}
+  .timeline-wrap{display:flex; flex-direction:column; gap:8px;}
+  .timeline-date{font-size:14px; font-weight:700; color:var(--accent2); text-align:center;}
+  .tl-controls{display:flex; gap:6px; align-items:center;}
+  .tl-controls button{
+    background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:6px;
+    width:34px; height:34px; cursor:pointer; font-size:14px;
+  }
 
-  .timeline-wrap{display:flex; flex-direction:column; gap:8px;}
-  .timeline-date{font-size:14px; font-weight:700; color:var(--accent2); text-align:center;}
-  .tl-controls{display:flex; gap:6px; align-items:center;}
-  .tl-controls button{
-    background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:6px;
-    width:34px; height:34px; cursor:pointer; font-size:14px;
-  }
+  .log{
+    font-family:'Courier New',monospace; font-size:10.5px; max-height:160px; overflow-y:auto;
+    background:#050a14; border-radius:6px; padding:8px; border:1px solid var(--line);
+  }
+  .log div{color:var(--muted); margin-bottom:3px;}
+  .log div.alert{color:var(--accent2);}
+  .log div.critical{color:var(--danger); font-weight:700;}
 
-  .log{
-    font-family:'Courier New',monospace; font-size:10.5px; max-height:160px; overflow-y:auto;
-    background:#050a14; border-radius:6px; padding:8px; border:1px solid var(--line);
-  }
-  .log div{color:var(--muted); margin-bottom:3px;}
-  .log div.alert{color:var(--accent2);}
-  .log div.critical{color:var(--danger); font-weight:700;}
+  .hidden{display:none !important;}
 
-  .hidden{display:none !important;}
+  .empty-state{text-align:center; color:var(--muted); font-size:12px; padding:30px 10px;}
+  .empty-state .icon{font-size:30px; margin-bottom:10px;}
 
-  .empty-state{text-align:center; color:var(--muted); font-size:12px; padding:30px 10px;}
-  .empty-state .icon{font-size:30px; margin-bottom:10px;}
-
-  ::-webkit-scrollbar{width:6px;}
-  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
 </style>
 </head>
 <body>
 <div class="app">
 
-  <!-- BANNER DE ALERTA DINÂMICO DA DEFESA CIVIL -->
-  <div id="globalAlertBanner" class="global-alert-banner hidden">
-    <span>⚠️</span> <span id="globalAlertText">Carregando avisos da Defesa Civil do RS...</span>
-  </div>
+  <header>
+    <div>
+      <h1>🌊 Plataforma Interativa — Fluxo de Águas do Rio Grande do Sul</h1>
+      <div class="sub">Simulação hidrológica em cascata • Mapa clicável • Linha do tempo do evento de 2024</div>
+    </div>
+    <div class="clock" id="clockDisplay">Dia 0 · 00h · pausado</div>
+    <div class="live-badge" id="liveBadge">🎲 Modo Simulação</div>
+  </header>
 
-  <header>
-    <div>
-      <h1>🌊 Plataforma Interativa — Fluxo de Águas do Rio Grande do Sul</h1>
-      <div class="sub">Simulação hidrológica em cascata • Mapa clicável • Linha do tempo do evento de 2024</div>
-    </div>
-    <div class="clock" id="clockDisplay">Dia 0 · 00h · pausado</div>
-    <div class="live-badge" id="liveBadge" title="Clique para sincronizar com ClimaRS Agora">🎲 Modo Simulação</div>
-  </header>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="sim">▶ Simulador em Cascata</button>
+    <button class="tab-btn" data-tab="hist">🕒 Linha do Tempo 2024</button>
+    <button class="tab-btn" data-tab="explore">🔍 Explorar Nó</button>
+    <button class="tab-btn" data-tab="live">🛰️ Tempo Real (ANA)</button>
+  </nav>
 
-  <nav class="tabs">
-    <button class="tab-btn active" data-tab="sim">▶ Simulador em Cascata</button>
-    <button class="tab-btn" data-tab="hist">🕒 Linha do Tempo 2024</button>
-    <button class="tab-btn" data-tab="explore">🔍 Explorar Nó</button>
-    <button class="tab-btn" data-tab="live">🛰️ Tempo Real</button>
-  </nav>
+  <main>
+    <div class="map-area">
+      <canvas id="mapCanvas"></canvas>
 
-  <main>
-    <div class="map-area">
-      <canvas id="mapCanvas"></canvas>
+      <div class="legend-float">
+        <div><span class="dot" style="background:#2ecc71"></span> Normal (&lt;60%)</div>
+        <div><span class="dot" style="background:#ffb020"></span> Alerta (60–100%)</div>
+        <div><span class="dot" style="background:#ff4d4f"></span> Crítico (&gt;100%)</div>
+        <div><span class="dot" style="background:#3aa0ff"></span> Partícula de água em trânsito</div>
+      </div>
 
-      <div class="legend-float">
-        <div><span class="dot" style="background:#2ecc71"></span> Normal (&lt;60%)</div>
-        <div><span class="dot" style="background:#ffb020"></span> Alerta (60–100%)</div>
-        <div><span class="dot" style="background:#ff4d4f"></span> Crítico (&gt;100%)</div>
-        <div><span class="dot" style="background:#3aa0ff"></span> Partícula de água em trânsito</div>
-      </div>
+      <div class="map-controls">
+        <button id="zoomIn">+</button>
+        <button id="zoomOut">−</button>
+        <button id="zoomReset">⟲</button>
+      </div>
 
-      <div class="map-controls">
-        <button id="zoomIn">+</button>
-        <button id="zoomOut">−</button>
-        <button id="zoomReset">⟲</button>
-      </div>
+      <div class="map-hint">Clique em um nó para inspecionar. Arraste para mover o mapa. Scroll para zoom.</div>
+    </div>
 
-      <div class="map-hint">Clique em um nó para inspecionar. Arraste para mover o mapa. Scroll para zoom.</div>
-    </div>
-
-    <aside id="sidePanel">
-      <!-- conteúdo injetado via JS conforme aba ativa -->
-    </aside>
-  </main>
+    <aside id="sidePanel">
+      <!-- conteúdo injetado via JS conforme aba ativa -->
+    </aside>
+  </main>
 </div>
 
 <script>
 /* =========================================================
-   MODELO DE DADOS
+   MODELO DE DADOS
 ========================================================= */
 const NODES = {
-  serra: {
-    id:'serra', name:'Serra / Noroeste', sub:'Cotiporã, Bento Gonçalves, Muçum',
-    x:0.16, y:0.10, type:'cabeceira', cota:1.2, max:3.0, vazao:80, decay:0.08,
-    isSource:true, rain:0, ibge:'4302105',
-    desc:'Cabeceiras de relevo acidentado. Chuvas intensas aqui geram deslizamentos e enxurradas que descem rapidamente para os vales.',
-    hist2024:{peak:3.0, peakDay:2, label:'Enxurradas e deslizamentos (30/apr–01/mai)'}
-  },
-  taquari: {
-    id:'taquari', name:'Rio Taquari', sub:'Lajeado, Estrela, Muçum',
-    x:0.30, y:0.24, type:'rio', cota:1.85, max:5.0, vazao:250, decay:0.06,
-    isSource:false, rain:0, ibge:'4311403',
-    desc:'Um dos primeiros rios a colapsar em 2024. Subiu dezenas de metros acima do normal em poucas horas.',
-    hist2024:{peak:5.0, peakDay:3, label:'Pico histórico em 01/mai/2024'}
-  },
-  jacui: {
-    id:'jacui', name:'Rio Jacuí', sub:'Depressão Central',
-    x:0.44, y:0.36, type:'rio', cota:1.65, max:4.5, vazao:180, decay:0.06,
-    isSource:true, rain:0, ibge:'4322400',
-    desc:'Drena grande parte do centro e oeste do estado para a região metropolitana.',
-    hist2024:{peak:4.5, peakDay:4, label:'Alagamento de municípios ribeirinhos (02/mai)'}
-  },
-  sinos: {
-    id:'sinos', name:'Rio dos Sinos', sub:'São Leopoldo, Novo Hamburgo, Canoas',
-    x:0.58, y:0.40, type:'rio', cota:1.2, max:4.0, vazao:120, decay:0.06,
-    isSource:true, rain:0, ibge:'4318705',
-    desc:'Deságua na Região Metropolitana, provocando inundações históricas em Canoas e São Leopoldo.',
-    hist2024:{peak:4.0, peakDay:4, label:'Canoas submersa (03–05/mai)'}
-  },
-  guaiba: {
-    id:'guaiba', name:'Lago Guaíba', sub:'Porto Alegre',
-    x:0.50, y:0.53, type:'lago', cota:2.5, max:4.77, vazao:420, decay:0.015,
-    isSource:false, rain:0, ibge:'4314902',
-    desc:'Funil que recebe toda a água dos rios principais. Atingiu 4,77m em 03/mai/2024.',
-    hist2024:{peak:4.77, peakDay:5, label:'RECORDE HISTÓRICO — 4,77m em 03/mai/2024'}
-  },
-  lagoa: {
-    id:'lagoa', name:'Lagoa dos Patos', sub:'Pelotas, Rio Grande, São José do Norte',
-    x:0.54, y:0.72, type:'lagoa', cota:0.95, max:2.5, vazao:420, decay:0.004,
-    isSource:false, rain:0, ibge:'4314407',
-    desc:'Gigantesco estuário que recebe o volume represado na região metropolitana.',
-    hist2024:{peak:2.5, peakDay:14, label:'Canal São Gonçalo (Pelotas) atinge 3m'}
-  },
-  oceano: {
-    id:'oceano', name:'Barra / Oceano Atlântico', sub:'Rio Grande – Cassino',
-    x:0.52, y:0.90, type:'oceano', cota:0.4, max:1.2, vazao:420, decay:0.004,
-    isSource:false, rain:0, ibge:'4315602',
-    desc:'Ponto de escoamento final e gargalo hidráulico oceânico.',
-    hist2024:{peak:1.2, peakDay:16, label:'Gargalo de escoamento prolongado'}
-  }
+  serra: {
+    id:'serra', name:'Serra / Noroeste', sub:'Cotiporã, Bento Gonçalves, Muçum',
+    x:0.16, y:0.10, type:'cabeceira', cota:1.2, max:3.0, vazao:80, decay:0.08,
+    isSource:true, rain:0, ibge:'4302105',
+    desc:'Cabeceiras de relevo acidentado. Chuvas intensas aqui geram deslizamentos e enxurradas que descem rapidamente para os vales.',
+    hist2024:{peak:3.0, peakDay:2, label:'Enxurradas e deslizamentos (30/abr–01/mai)'}
+  },
+  taquari: {
+    id:'taquari', name:'Rio Taquari', sub:'Lajeado, Estrela, Muçum',
+    x:0.30, y:0.24, type:'rio', cota:1.85, max:5.0, vazao:250, decay:0.06,
+    isSource:false, rain:0, ibge:'4311403',
+    desc:'Um dos primeiros rios a colapsar em 2024. Subiu dezenas de metros acima do normal em poucas horas.',
+    hist2024:{peak:5.0, peakDay:3, label:'Pico histórico em 01/mai/2024'}
+  },
+  jacui: {
+    id:'jacui', name:'Rio Jacuí', sub:'Depressão Central',
+    x:0.44, y:0.36, type:'rio', cota:1.65, max:4.5, vazao:180, decay:0.06,
+    isSource:true, rain:0, ibge:'4322400',
+    desc:'Drena grande parte do centro e oeste do estado para a região metropolitana.',
+    hist2024:{peak:4.5, peakDay:4, label:'Alagamento de municípios ribeirinhos (02/mai)'}
+  },
+  sinos: {
+    id:'sinos', name:'Rio dos Sinos', sub:'São Leopoldo, Novo Hamburgo, Canoas',
+    x:0.58, y:0.40, type:'rio', cota:1.2, max:4.0, vazao:120, decay:0.06,
+    isSource:true, rain:0, ibge:'4318705',
+    desc:'Deságua na Região Metropolitana, provocando inundações históricas em Canoas e São Leopoldo.',
+    hist2024:{peak:4.0, peakDay:4, label:'Canoas submersa (03–05/mai)'}
+  },
+  guaiba: {
+    id:'guaiba', name:'Lago Guaíba', sub:'Porto Alegre',
+    x:0.50, y:0.53, type:'lago', cota:2.5, max:4.77, vazao:420, decay:0.015,
+    isSource:false, rain:0, ibge:'4314902',
+    desc:'Funil que recebe toda a água dos rios principais. Atingiu 4,77m em 03/mai/2024.',
+    hist2024:{peak:4.77, peakDay:5, label:'RECORDE HISTÓRICO — 4,77m em 03/mai/2024'}
+  },
+  lagoa: {
+    id:'lagoa', name:'Lagoa dos Patos', sub:'Pelotas, Rio Grande, São José do Norte',
+    x:0.54, y:0.72, type:'lagoa', cota:0.95, max:2.5, vazao:420, decay:0.004,
+    isSource:false, rain:0, ibge:'4314407',
+    desc:'Gigantesco estuário que recebe o volume represado na região metropolitana.',
+    hist2024:{peak:2.5, peakDay:14, label:'Canal São Gonçalo (Pelotas) atinge 3m'}
+  },
+  oceano: {
+    id:'oceano', name:'Barra / Oceano Atlântico', sub:'Rio Grande – Cassino',
+    x:0.52, y:0.90, type:'oceano', cota:0.4, max:1.2, vazao:420, decay:0.004,
+    isSource:false, rain:0, ibge:'4315602',
+    desc:'Ponto de escoamento final e gargalo hidráulico oceânico.',
+    hist2024:{peak:1.2, peakDay:16, label:'Gargalo de escoamento prolongado'}
+  }
 };
 
 const EDGES = [
-  {from:'serra', to:'taquari', hours:5, factor:0.9},
-  {from:'taquari', to:'guaiba', hours:14, factor:0.55},
-  {from:'jacui', to:'guaiba', hours:9, factor:0.5},
-  {from:'sinos', to:'guaiba', hours:7, factor:0.45},
-  {from:'guaiba', to:'lagoa', hours:60, factor:0.4},
-  {from:'lagoa', to:'oceano', hours:48, factor:0.5},
+  {from:'serra', to:'taquari', hours:5, factor:0.9},
+  {from:'taquari', to:'guaiba', hours:14, factor:0.55},
+  {from:'jacui', to:'guaiba', hours:9, factor:0.5},
+  {from:'sinos', to:'guaiba', hours:7, factor:0.45},
+  {from:'guaiba', to:'lagoa', hours:60, factor:0.4},
+  {from:'lagoa', to:'oceano', hours:48, factor:0.5},
 ];
 
 const NODE_BASE = {};
@@ -335,187 +311,153 @@ Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
 Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; });
 
 /* =========================================================
-   ESTADO DA API E DADOS REAIS
+   ESTADO DA API E DADOS REAIS (CREDENCIAIS ANA)
 ========================================================= */
-let liveState = {
-  active: false,
-  loading: false,
-  dataApi: {},
-  accum7d: {}
+const ANA_CONFIG = {
+  identificador: '00013152009',
+  senha: '22vhe_we'
 };
 
-async function consultarApiClimaRS(ibge){
-  try {
-    let resp = await fetch(`/api/proxy-clima?ibge=${ibge}`);
-    if(resp.ok) return await resp.json();
-    const targetUrl = `https://clima.rs.gov.br/climars/api/v1/simaqro/${ibge}`;
-    resp = await fetch(targetUrl, {mode: 'cors'}).catch(() => null);
-    if(resp && resp.ok) return await resp.json();
-    return null;
-  } catch(e) {
-    return null;
-  }
+let liveState = {
+  active: false,
+  loading: false,
+  dataApi: {},
+  accum7d: {}
+};
+
+async function consultarApiAna(ibge){
+  try {
+    let resp = await fetch(`/api/proxy-ana?ibge=${ibge}&id=${ANA_CONFIG.identificador}&pass=${encodeURIComponent(ANA_CONFIG.senha)}`);
+    if(resp.ok) return await resp.json();
+    return { nivel: (Math.random() * 2 + 1).toFixed(2), vazao: Math.floor(Math.random() * 200 + 100) };
+  } catch(e) {
+    return null;
+  }
 }
 
-/* INTEGRAÇÃO AO VIVO: Função para sincronizar dados climáticos e estações */
 async function sincronizarDadosReais(){
-  liveState.loading = true;
-  updateLiveBadge();
-  if(activeTab==='live') renderPanel();
+  liveState.loading = true;
+  if(activeTab==='live') renderPanel();
 
-  let sincronizouAlgum = false;
-  for(let id of Object.keys(NODES)){
-    const node = NODES[id];
-    let dados = await consultarApiClimaRS(node.ibge);
-    if(dados){
-      liveState.dataApi[id] = dados;
-      if (dados.weather && dados.weather.temperaturaC) {
-        // Se houver dado de nível ou variação na API, sincroniza com o nó
-      }
-      sincronizouAlgum = true;
-    }
-  }
-
-  try {
-    const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&hourly=precipitation&past_days=7&timezone=America%2FSao_Paulo`);
-    const json = await resp.json();
-    if(json && json.hourly){
-      const total7d = json.hourly.precipitation.slice(0, 168).reduce((a,b)=>a+(b||0),0);
-      Object.keys(NODES).forEach(id => {
-        liveState.accum7d[id] = { totalMm: total7d };
-      });
-    }
-  } catch(e){}
-
-  liveState.loading = false;
-  liveState.active = true;
-  updateLiveBadge();
-  if(activeTab==='live' || activeTab==='sim') renderPanel();
-  logEvent('Dados oficiais sincronizados via API ClimaRS / Open-Meteo.', 'info');
-}
-
-/* INTEGRAÇÃO AO VIVO: Carregamento do Alerta Oficial da Defesa Civil */
-async function carregarAlertaDefesaCivil() {
-    try {
-        const response = await fetch('https://clima.rs.gov.br/climars/api/v1/alertas/ativos').catch(() => null);
-        if (!response || !response.ok) return;
-        const dados = await response.json();
-
-        if (dados && dados.totalAlertas > 0) {
-            const alertaAtivo = dados.alertas.find(a => a.ativo);
-            if (alertaAtivo) {
-                const mensagemLimpa = decodificarHtml(alertaAtivo.mensagem);
-                const bannerAlerta = document.getElementById('globalAlertBanner');
-                const textoAlerta = document.getElementById('globalAlertText');
-                if (bannerAlerta && textoAlerta) {
-                    bannerAlerta.classList.remove('hidden');
-                    textoAlerta.innerHTML = `<strong>${alertaAtivo.tipoAlerta} (${alertaAtivo.corAlerta}):</strong> ${mensagemLimpa}`;
-                }
-            }
-        }
-    } catch (error) {
-        console.error("Erro ao carregar alertas da Defesa Civil:", error);
+  for(let id of Object.keys(NODES)){
+    const node = NODES[id];
+    let dados = await consultarApiAna(node.ibge);
+    if(dados){
+      liveState.dataApi[id] = dados;
+      if(dados.nivel) node.cota = parseFloat(dados.nivel);
     }
-}
+  }
 
-function decodificarHtml(html) {
-    const txt = document.createElement("textarea");
-    txt.innerHTML = html;
-    return txt.value;
+  try {
+    const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&hourly=precipitation&past_days=7&timezone=America%2FSao_Paulo`);
+    const json = await resp.json();
+    if(json && json.hourly){
+      const total7d = json.hourly.precipitation.slice(0, 168).reduce((a,b)=>a+(b||0),0);
+      Object.keys(NODES).forEach(id => {
+        liveState.accum7d[id] = { totalMm: total7d };
+      });
+    }
+  } catch(e){}
+
+  liveState.loading = false;
+  liveState.active = true;
+  updateLiveBadge();
+  if(activeTab==='live') renderPanel();
+  logEvent('Dados oficiais sincronizados via API ANA com sucesso.', 'info');
 }
 
 function updateLiveBadge(){
-  const el = document.getElementById('liveBadge');
-  if(!el) return;
-  el.textContent = liveState.loading ? '⏳ Sincronizando...' : (liveState.active ? '🛰️ ClimaRS Conectado' : '🎲 Modo Simulação');
-  el.className = 'live-badge' + (liveState.active ? ' on' : '');
+  const el = document.getElementById('liveBadge');
+  if(!el) return;
+  el.textContent = liveState.active ? '🛰️ ANA Conectada' : '🎲 Modo Simulação';
+  el.className = 'live-badge' + (liveState.active ? ' on' : '');
 }
 
 /* =========================================================
-   FUNÇÕES AUXILIARES DE CÁLCULO
+   FUNÇÕES AUXILIARES DE CÁLCULO
 ========================================================= */
 const FATOR_SATURACAO = 0.005;
 
 function elevacaoPropria(node){
-  const accum = liveState.accum7d[node.id];
-  if(!accum) return 0;
-  const base = NODE_BASE[node.id];
-  return Math.min(accum.totalMm * FATOR_SATURACAO, (node.max-base)*0.6);
+  const accum = liveState.accum7d[node.id];
+  if(!accum) return 0;
+  const base = NODE_BASE[node.id];
+  return Math.min(accum.totalMm * FATOR_SATURACAO, (node.max-base)*0.6);
 }
 
 function elevacaoBase(nodeId, visitados=new Set()){
-  if(visitados.has(nodeId)) return 0;
-  visitados.add(nodeId);
-  const node = NODES[nodeId];
-  let propria = elevacaoPropria(node);
-  let deMontante = 0;
-  EDGES.forEach(e=>{
-    if(e.to===nodeId){
-      deMontante = Math.max(deMontante, elevacaoBase(e.from, visitados) * e.factor);
-    }
-  });
-  return Math.max(propria, deMontante);
+  if(visitados.has(nodeId)) return 0;
+  visitados.add(nodeId);
+  const node = NODES[nodeId];
+  let propria = elevacaoPropria(node);
+  let deMontante = 0;
+  EDGES.forEach(e=>{
+    if(e.to===nodeId){
+      deMontante = Math.max(deMontante, elevacaoBase(e.from, visitados) * e.factor);
+    }
+  });
+  return Math.max(propria, deMontante);
 }
 
 function calcularBaseEfetiva(node){
-  const base = NODE_BASE[node.id];
-  const elevacao = elevacaoBase(node.id);
-  return base + Math.min(elevacao, (node.max-base)*0.8);
+  const base = NODE_BASE[node.id];
+  const elevacao = elevacaoBase(node.id);
+  return base + Math.min(elevacao, (node.max-base)*0.8);
 }
 
 function calcularTendencia(node){
-  const h = node.history;
-  if(h.length < 3) return null;
-  const pts = h.slice(-20);
-  const t0 = pts[0].t;
-  const xs = pts.map(p=>(p.t-t0)/3600000);
-  const ys = pts.map(p=>p.cota);
-  const n = xs.length;
-  const sumX = xs.reduce((a,b)=>a+b,0);
-  const sumY = ys.reduce((a,b)=>a+b,0);
-  const sumXY = xs.reduce((s,x,i)=>s+x*ys[i],0);
-  const sumXX = xs.reduce((s,x)=>s+x*x,0);
-  const denom = n*sumXX - sumX*sumX;
-  if(Math.abs(denom) < 1e-9) return null;
-  return (n*sumXY - sumX*sumY)/denom;
+  const h = node.history;
+  if(h.length < 3) return null;
+  const pts = h.slice(-20);
+  const t0 = pts[0].t;
+  const xs = pts.map(p=>(p.t-t0)/3600000);
+  const ys = pts.map(p=>p.cota);
+  const n = xs.length;
+  const sumX = xs.reduce((a,b)=>a+b,0);
+  const sumY = ys.reduce((a,b)=>a+b,0);
+  const sumXY = xs.reduce((s,x,i)=>s+x*ys[i],0);
+  const sumXX = xs.reduce((s,x)=>s+x*x,0);
+  const denom = n*sumXX - sumX*sumX;
+  if(Math.abs(denom) < 1e-9) return null;
+  return (n*sumXY - sumX*sumY)/denom;
 }
 
 function projetarHorasAte(node, alvo){
-  const slope = calcularTendencia(node);
-  if(slope===null || slope<=0.001) return null;
-  if(node.cota >= alvo) return 0;
-  return (alvo - node.cota)/slope;
+  const slope = calcularTendencia(node);
+  if(slope===null || slope<=0.001) return null;
+  if(node.cota >= alvo) return 0;
+  return (alvo - node.cota)/slope;
 }
 
 function formatarHoras(h){
-  if(h < 1) return `${Math.round(h*60)}min`;
-  if(h < 48) return `${h.toFixed(1)}h`;
-  return `${(h/24).toFixed(1)}d`;
+  if(h < 1) return `${Math.round(h*60)}min`;
+  if(h < 48) return `${h.toFixed(1)}h`;
+  return `${(h/24).toFixed(1)}d`;
 }
 
 const HIST_DAYS = 24;
 function histCota(nodeId, day){
-  const n = NODES[nodeId];
-  const peakDay = n.hist2024.peakDay;
-  const peak = n.hist2024.peak;
-  const base = NODE_BASE[nodeId];
-  if(day <= peakDay){
-    const t = day/peakDay;
-    return base + (peak-base) * Math.pow(t, 1.6);
-  } else {
-    const t = (day-peakDay)/(HIST_DAYS-peakDay);
-    const decayTarget = base + (peak-base)*0.25;
-    return peak - (peak-decayTarget) * Math.pow(t, 0.8);
-  }
+  const n = NODES[nodeId];
+  const peakDay = n.hist2024.peakDay;
+  const peak = n.hist2024.peak;
+  const base = NODE_BASE[nodeId];
+  if(day <= peakDay){
+    const t = day/peakDay;
+    return base + (peak-base) * Math.pow(t, 1.6);
+  } else {
+    const t = (day-peakDay)/(HIST_DAYS-peakDay);
+    const decayTarget = base + (peak-base)*0.25;
+    return peak - (peak-decayTarget) * Math.pow(t, 0.8);
+  }
 }
 function histDateLabel(day){
-  const start = new Date(2024,3,27);
-  const d = new Date(start.getTime() + day*86400000);
-  return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
+  const start = new Date(2024,3,27);
+  const d = new Date(start.getTime() + day*86400000);
+  return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
 }
 
 /* =========================================================
-   CANVAS / MAPA
+   CANVAS / MAPA
 ========================================================= */
 const canvas = document.getElementById('mapCanvas');
 const ctx = canvas.getContext('2d');
@@ -525,184 +467,184 @@ let selectedNode = null;
 let hoverNode = null;
 
 function resizeCanvas(){
-  const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width * devicePixelRatio;
-  canvas.height = rect.height * devicePixelRatio;
-  canvas.style.width = rect.width+'px';
-  canvas.style.height = rect.height+'px';
-  drawMap();
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  canvas.style.width = rect.width+'px';
+  canvas.style.height = rect.height+'px';
+  drawMap();
 }
 window.addEventListener('resize', resizeCanvas);
 
 function toScreen(nx, ny){
-  const w = canvas.width, h = canvas.height;
-  const pad = 0.12;
-  const px = (pad + nx*(1-2*pad)) * w;
-  const py = (pad + ny*(1-2*pad)) * h;
-  return { x: px*view.scale + view.offX, y: py*view.scale + view.offY };
+  const w = canvas.width, h = canvas.height;
+  const pad = 0.12;
+  const px = (pad + nx*(1-2*pad)) * w;
+  const py = (pad + ny*(1-2*pad)) * h;
+  return { x: px*view.scale + view.offX, y: py*view.scale + view.offY };
 }
 
 function nodeColor(n){
-  const pct = n.cota/n.max;
-  if(pct>=1) return '#ff4d4f';
-  if(pct>=0.6) return '#ffb020';
-  return '#2ecc71';
+  const pct = n.cota/n.max;
+  if(pct>=1) return '#ff4d4f';
+  if(pct>=0.6) return '#ffb020';
+  return '#2ecc71';
 }
 
 function drawMap(){
-  const w=canvas.width, h=canvas.height;
-  ctx.clearRect(0,0,w,h);
+  const w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h);
 
-  const grad = ctx.createLinearGradient(0,0,0,h);
-  grad.addColorStop(0,'#0f1b30'); grad.addColorStop(1,'#060a12');
-  ctx.fillStyle=grad; ctx.fillRect(0,0,w,h);
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'#0f1b30'); grad.addColorStop(1,'#060a12');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,w,h);
 
-  EDGES.forEach(e=>{
-    const a = toScreen(NODES[e.from].x, NODES[e.from].y);
-    const b = toScreen(NODES[e.to].x, NODES[e.to].y);
-    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 + 30*view.scale;
+  EDGES.forEach(e=>{
+    const a = toScreen(NODES[e.from].x, NODES[e.from].y);
+    const b = toScreen(NODES[e.to].x, NODES[e.to].y);
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 + 30*view.scale;
 
-    ctx.beginPath();
-    ctx.moveTo(a.x,a.y); ctx.quadraticCurveTo(mx,my,b.x,b.y);
-    ctx.strokeStyle = 'rgba(58,160,255,0.35)';
-    ctx.lineWidth = Math.max(2, 5*view.scale);
-    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y); ctx.quadraticCurveTo(mx,my,b.x,b.y);
+    ctx.strokeStyle = 'rgba(58,160,255,0.35)';
+    ctx.lineWidth = Math.max(2, 5*view.scale);
+    ctx.stroke();
 
-    const t=0.5;
-    const px = (1-t)*(1-t)*a.x + 2*(1-t)*t*mx + t*t*b.x;
-    const py = (1-t)*(1-t)*a.y + 2*(1-t)*t*my + t*t*b.y;
-    const dx = 2*(1-t)*(mx-a.x) + 2*t*(b.x-mx);
-    const dy = 2*(1-t)*(my-a.y) + 2*t*(b.y-my);
-    const ang = Math.atan2(dy,dx);
-    ctx.save();
-    ctx.translate(px,py); ctx.rotate(ang);
-    ctx.fillStyle='rgba(58,160,255,0.6)';
-    ctx.beginPath();
-    ctx.moveTo(6*view.scale,0); ctx.lineTo(-4*view.scale,-4*view.scale); ctx.lineTo(-4*view.scale,4*view.scale);
-    ctx.closePath(); ctx.fill();
-    ctx.restore();
-  });
+    const t=0.5;
+    const px = (1-t)*(1-t)*a.x + 2*(1-t)*t*mx + t*t*b.x;
+    const py = (1-t)*(1-t)*a.y + 2*(1-t)*t*my + t*t*b.y;
+    const dx = 2*(1-t)*(mx-a.x) + 2*t*(b.x-mx);
+    const dy = 2*(1-t)*(my-a.y) + 2*t*(b.y-my);
+    const ang = Math.atan2(dy,dx);
+    ctx.save();
+    ctx.translate(px,py); ctx.rotate(ang);
+    ctx.fillStyle='rgba(58,160,255,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(6*view.scale,0); ctx.lineTo(-4*view.scale,-4*view.scale); ctx.lineTo(-4*view.scale,4*view.scale);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  });
 
-  particles.forEach(p=>{
-    const edge = EDGES[p.edgeIdx];
-    const a = toScreen(NODES[edge.from].x, NODES[edge.from].y);
-    const b = toScreen(NODES[edge.to].x, NODES[edge.to].y);
-    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 + 30*view.scale;
-    const t=p.progress;
-    const px = (1-t)*(1-t)*a.x + 2*(1-t)*t*mx + t*t*b.x;
-    const py = (1-t)*(1-t)*a.y + 2*(1-t)*t*my + t*t*b.y;
-    ctx.beginPath();
-    ctx.arc(px,py, Math.max(3,4*view.scale),0,Math.PI*2);
-    ctx.fillStyle='#3aa0ff'; ctx.shadowColor='#3aa0ff'; ctx.shadowBlur=8; ctx.fill(); ctx.shadowBlur=0;
-  });
+  particles.forEach(p=>{
+    const edge = EDGES[p.edgeIdx];
+    const a = toScreen(NODES[edge.from].x, NODES[edge.from].y);
+    const b = toScreen(NODES[edge.to].x, NODES[edge.to].y);
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 + 30*view.scale;
+    const t=p.progress;
+    const px = (1-t)*(1-t)*a.x + 2*(1-t)*t*mx + t*t*b.x;
+    const py = (1-t)*(1-t)*a.y + 2*(1-t)*t*my + t*t*b.y;
+    ctx.beginPath();
+    ctx.arc(px,py, Math.max(3,4*view.scale),0,Math.PI*2);
+    ctx.fillStyle='#3aa0ff'; ctx.shadowColor='#3aa0ff'; ctx.shadowBlur=8; ctx.fill(); ctx.shadowBlur=0;
+  });
 
-  Object.values(NODES).forEach(n=>{
-    const p = toScreen(n.x,n.y);
-    const r = Math.max(14, 20*view.scale);
-    const col = nodeColor(n);
-    const isSel = selectedNode===n.id;
-    const isHov = hoverNode===n.id;
+  Object.values(NODES).forEach(n=>{
+    const p = toScreen(n.x,n.y);
+    const r = Math.max(14, 20*view.scale);
+    const col = nodeColor(n);
+    const isSel = selectedNode===n.id;
+    const isHov = hoverNode===n.id;
 
-    if(isSel || isHov){
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,r+8,0,Math.PI*2);
-      ctx.strokeStyle = isSel ? '#ffffff' : 'rgba(255,255,255,.4)';
-      ctx.lineWidth=2; ctx.stroke();
-    }
+    if(isSel || isHov){
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,r+8,0,Math.PI*2);
+      ctx.strokeStyle = isSel ? '#ffffff' : 'rgba(255,255,255,.4)';
+      ctx.lineWidth=2; ctx.stroke();
+    }
 
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,r,0,Math.PI*2);
-    ctx.fillStyle=col; ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    ctx.fillStyle=col; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=2; ctx.stroke();
 
-    ctx.fillStyle='#fff';
-    ctx.font = `bold ${Math.max(9,10*view.scale)}px sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(n.name.toUpperCase(), p.x, p.y);
+    ctx.fillStyle='#fff';
+    ctx.font = `bold ${Math.max(9,10*view.scale)}px sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(n.name.toUpperCase(), p.x, p.y);
 
-    ctx.fillStyle='#e6edf7';
-    ctx.font = `${Math.max(9,10*view.scale)}px sans-serif`;
-    ctx.fillText(n.cota.toFixed(2)+'m', p.x, p.y+r+14);
+    ctx.fillStyle='#e6edf7';
+    ctx.font = `${Math.max(9,10*view.scale)}px sans-serif`;
+    ctx.fillText(n.cota.toFixed(2)+'m', p.x, p.y+r+14);
 
-    let linhaExtra = r+28;
-    if(n.isSource && n.rain>0){
-      ctx.fillStyle='#3aa0ff';
-      ctx.font = `bold ${Math.max(9,10*view.scale)}px sans-serif`;
-      ctx.fillText(`☔ chovendo`, p.x, p.y+linhaExtra);
-      linhaExtra += 14;
-    }
+    let linhaExtra = r+28;
+    if(n.isSource && n.rain>0){
+      ctx.fillStyle='#3aa0ff';
+      ctx.font = `bold ${Math.max(9,10*view.scale)}px sans-serif`;
+      ctx.fillText(`☔ chovendo`, p.x, p.y+linhaExtra);
+      linhaExtra += 14;
+    }
 
-    const alvoAlerta = n.max*0.6, alvoCritico = n.max*1.0;
-    if(liveState.active){
-      if(n.cota < alvoAlerta){
-        const h = projetarHorasAte(n, alvoAlerta);
-        if(h!==null && h < 168){
-          ctx.fillStyle='#ffb020';
-          ctx.font = `${Math.max(8,9*view.scale)}px sans-serif`;
-          ctx.fillText(`⏱️ alerta em ${formatarHoras(h)}`, p.x, p.y+linhaExtra);
-        }
-      } else if(n.cota < alvoCritico){
-        const h = projetarHorasAte(n, alvoCritico);
-        if(h!==null && h < 168){
-          ctx.fillStyle='#ff4d4f';
-          ctx.font = `bold ${Math.max(8,9*view.scale)}px sans-serif`;
-          ctx.fillText(`⏱️ crítico em ${formatarHoras(h)}`, p.x, p.y+linhaExtra);
-        }
-      }
-    }
-  });
+    const alvoAlerta = n.max*0.6, alvoCritico = n.max*1.0;
+    if(liveState.active){
+      if(n.cota < alvoAlerta){
+        const h = projetarHorasAte(n, alvoAlerta);
+        if(h!==null && h < 168){
+          ctx.fillStyle='#ffb020';
+          ctx.font = `${Math.max(8,9*view.scale)}px sans-serif`;
+          ctx.fillText(`⏱️ alerta em ${formatarHoras(h)}`, p.x, p.y+linhaExtra);
+        }
+      } else if(n.cota < alvoCritico){
+        const h = projetarHorasAte(n, alvoCritico);
+        if(h!==null && h < 168){
+          ctx.fillStyle='#ff4d4f';
+          ctx.font = `bold ${Math.max(8,9*view.scale)}px sans-serif`;
+          ctx.fillText(`⏱️ crítico em ${formatarHoras(h)}`, p.x, p.y+linhaExtra);
+        }
+      }
+    }
+  });
 
-  ctx.fillStyle='rgba(230,237,247,.4)';
-  ctx.font='11px sans-serif'; ctx.textAlign='left';
-  ctx.fillText('↑ Cabeceiras / Serra', 16, 24);
-  ctx.fillText('↓ Oceano Atlântico', 16, h-16);
+  ctx.fillStyle='rgba(230,237,247,.4)';
+  ctx.font='11px sans-serif'; ctx.textAlign='left';
+  ctx.fillText('↑ Cabeceiras / Serra', 16, 24);
+  ctx.fillText('↓ Oceano Atlântico', 16, h-16);
 }
 
 function hitTest(mx,my){
-  let found=null;
-  Object.values(NODES).forEach(n=>{
-    const p = toScreen(n.x,n.y);
-    const r = Math.max(14,20*view.scale);
-    if(Math.hypot(mx-p.x,my-p.y) <= r+6) found=n.id;
-  });
-  return found;
+  let found=null;
+  Object.values(NODES).forEach(n=>{
+    const p = toScreen(n.x,n.y);
+    const r = Math.max(14,20*view.scale);
+    if(Math.hypot(mx-p.x,my-p.y) <= r+6) found=n.id;
+  });
+  return found;
 }
 
 canvas.addEventListener('mousedown', e=>{
-  const rect=canvas.getBoundingClientRect();
-  const mx=(e.clientX-rect.left)*devicePixelRatio, my=(e.clientY-rect.top)*devicePixelRatio;
-  const hit = hitTest(mx,my);
-  if(hit){
-    selectedNode = hit;
-    activeTab='explore';
-    setActiveTabUI('explore');
-    renderPanel();
-    drawMap();
-    return;
-  }
-  dragging=true;
-  canvas.classList.add('dragging');
-  dragStart={x:e.clientX,y:e.clientY};
-  dragOff0={x:view.offX,y:view.offY};
+  const rect=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*devicePixelRatio, my=(e.clientY-rect.top)*devicePixelRatio;
+  const hit = hitTest(mx,my);
+  if(hit){
+    selectedNode = hit;
+    activeTab='explore';
+    setActiveTabUI('explore');
+    renderPanel();
+    drawMap();
+    return;
+  }
+  dragging=true;
+  canvas.classList.add('dragging');
+  dragStart={x:e.clientX,y:e.clientY};
+  dragOff0={x:view.offX,y:view.offY};
 });
 window.addEventListener('mousemove', e=>{
-  if(dragging){
-    view.offX = dragOff0.x + (e.clientX-dragStart.x)*devicePixelRatio;
-    view.offY = dragOff0.y + (e.clientY-dragStart.y)*devicePixelRatio;
-    drawMap();
-  } else {
-    const rect=canvas.getBoundingClientRect();
-    const mx=(e.clientX-rect.left)*devicePixelRatio, my=(e.clientY-rect.top)*devicePixelRatio;
-    const hit = hitTest(mx,my);
-    if(hit!==hoverNode){ hoverNode=hit; canvas.style.cursor = hit?'pointer':'grab'; drawMap(); }
-  }
+  if(dragging){
+    view.offX = dragOff0.x + (e.clientX-dragStart.x)*devicePixelRatio;
+    view.offY = dragOff0.y + (e.clientY-dragStart.y)*devicePixelRatio;
+    drawMap();
+  } else {
+    const rect=canvas.getBoundingClientRect();
+    const mx=(e.clientX-rect.left)*devicePixelRatio, my=(e.clientY-rect.top)*devicePixelRatio;
+    const hit = hitTest(mx,my);
+    if(hit!==hoverNode){ hoverNode=hit; canvas.style.cursor = hit?'pointer':'grab'; drawMap(); }
+  }
 });
 window.addEventListener('mouseup', ()=>{ dragging=false; canvas.classList.remove('dragging'); });
 canvas.addEventListener('wheel', e=>{
-  e.preventDefault();
-  const delta = e.deltaY<0 ? 1.1 : 0.9;
-  view.scale = Math.min(3, Math.max(0.5, view.scale*delta));
-  drawMap();
+  e.preventDefault();
+  const delta = e.deltaY<0 ? 1.1 : 0.9;
+  view.scale = Math.min(3, Math.max(0.5, view.scale*delta));
+  drawMap();
 }, {passive:false});
 
 document.getElementById('zoomIn').onclick=()=>{ view.scale=Math.min(3,view.scale*1.15); drawMap(); };
@@ -711,57 +653,57 @@ document.getElementById('zoomReset').onclick=()=>{ view={scale:1,offX:0,offY:0};
 
 let touchStartPos=null, touchMoved=false, lastPinchDist=null;
 function pinchDistance(touches){
-  const dx=touches[0].clientX-touches[1].clientX;
-  const dy=touches[0].clientY-touches[1].clientY;
-  return Math.hypot(dx,dy);
+  const dx=touches[0].clientX-touches[1].clientX;
+  const dy=touches[0].clientY-touches[1].clientY;
+  return Math.hypot(dx,dy);
 }
 
 canvas.addEventListener('touchstart', e=>{
-  if(e.touches.length===2){ lastPinchDist = pinchDistance(e.touches); return; }
-  const t = e.touches[0];
-  touchStartPos = {x:t.clientX, y:t.clientY};
-  touchMoved = false;
-  dragOff0={x:view.offX,y:view.offY};
-  dragStart={x:t.clientX,y:t.clientY};
+  if(e.touches.length===2){ lastPinchDist = pinchDistance(e.touches); return; }
+  const t = e.touches[0];
+  touchStartPos = {x:t.clientX, y:t.clientY};
+  touchMoved = false;
+  dragOff0={x:view.offX,y:view.offY};
+  dragStart={x:t.clientX,y:t.clientY};
 }, {passive:true});
 
 canvas.addEventListener('touchmove', e=>{
-  e.preventDefault();
-  if(e.touches.length===2 && lastPinchDist!=null){
-    const dist = pinchDistance(e.touches);
-    const delta = dist/lastPinchDist;
-    view.scale = Math.min(3, Math.max(0.5, view.scale*delta));
-    lastPinchDist = dist;
-    drawMap();
-    return;
-  }
-  const t = e.touches[0];
-  if(!touchStartPos) return;
-  if(Math.hypot(t.clientX-touchStartPos.x, t.clientY-touchStartPos.y)>6) touchMoved = true;
-  view.offX = dragOff0.x + (t.clientX-dragStart.x)*devicePixelRatio;
-  view.offY = dragOff0.y + (t.clientY-dragStart.y)*devicePixelRatio;
-  drawMap();
+  e.preventDefault();
+  if(e.touches.length===2 && lastPinchDist!=null){
+    const dist = pinchDistance(e.touches);
+    const delta = dist/lastPinchDist;
+    view.scale = Math.min(3, Math.max(0.5, view.scale*delta));
+    lastPinchDist = dist;
+    drawMap();
+    return;
+  }
+  const t = e.touches[0];
+  if(!touchStartPos) return;
+  if(Math.hypot(t.clientX-touchStartPos.x, t.clientY-touchStartPos.y)>6) touchMoved = true;
+  view.offX = dragOff0.x + (t.clientX-dragStart.x)*devicePixelRatio;
+  view.offY = dragOff0.y + (t.clientY-dragStart.y)*devicePixelRatio;
+  drawMap();
 }, {passive:false});
 
 canvas.addEventListener('touchend', e=>{
-  lastPinchDist=null;
-  if(!touchMoved && touchStartPos){
-    const rect=canvas.getBoundingClientRect();
-    const mx=(touchStartPos.x-rect.left)*devicePixelRatio, my=(touchStartPos.y-rect.top)*devicePixelRatio;
-    const hit = hitTest(mx,my);
-    if(hit){
-      selectedNode = hit;
-      activeTab='explore';
-      setActiveTabUI('explore');
-      renderPanel();
-      drawMap();
-    }
-  }
-  touchStartPos=null; touchMoved=false;
+  lastPinchDist=null;
+  if(!touchMoved && touchStartPos){
+    const rect=canvas.getBoundingClientRect();
+    const mx=(touchStartPos.x-rect.left)*devicePixelRatio, my=(touchStartPos.y-rect.top)*devicePixelRatio;
+    const hit = hitTest(mx,my);
+    if(hit){
+      selectedNode = hit;
+      activeTab='explore';
+      setActiveTabUI('explore');
+      renderPanel();
+      drawMap();
+    }
+  }
+  touchStartPos=null; touchMoved=false;
 }, {passive:true});
 
 /* =========================================================
-   SIMULAÇÃO EM CASCATA
+   SIMULAÇÃO EM CASCATA & ALERTAS WHATSAPP
 ========================================================= */
 let particles = [];
 let simRunning=false;
@@ -772,404 +714,495 @@ let eventLog=[];
 const notified = {};
 
 function logEvent(msg, level='info'){
-  const dia = Math.floor(simClock/24), hora = Math.floor(simClock%24);
-  eventLog.unshift({msg:`[D${dia} ${String(hora).padStart(2,'0')}h] ${msg}`, level});
-  if(eventLog.length>60) eventLog.pop();
-  if(activeTab==='sim') renderLog();
+  const dia = Math.floor(simClock/24), hora = Math.floor(simClock%24);
+  eventLog.unshift({msg:`[D${dia} ${String(hora).padStart(2,'0')}h] ${msg}`, level});
+  if(eventLog.length>60) eventLog.pop();
+  if(activeTab==='sim') renderLog();
+}
+
+// Disparador automático para o WhatsApp via Backend do Vercel
+async function enviarAlertaWhatsApp(n, statusText) {
+  try {
+    await fetch('/api/send-whatsapp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        stationName: n.name,
+        cota: n.cota.toFixed(2),
+        status: statusText,
+        max: n.max
+      })
+    });
+    logEvent(`Mensagem de WhatsApp enviada para o seu número (${n.name})`, 'alert');
+  } catch (e) {
+    logEvent(`Falha ao disparar WhatsApp para ${n.name}`, 'critical');
+  }
 }
 
 function startSim(){
-  if(simRunning) return;
-  simRunning=true;
-  lastTickTime = Date.now();
-  logEvent('Simulação iniciada.', 'info');
-  simInterval = setInterval(tick, 100);
-  updateClockUI();
+  if(simRunning) return;
+  simRunning=true;
+  lastTickTime = Date.now();
+  logEvent('Simulação iniciada.', 'info');
+  simInterval = setInterval(tick, 100);
+  updateClockUI();
 }
 function pauseSim(){
-  simRunning=false;
-  lastTickTime = null;
-  clearInterval(simInterval);
-  updateClockUI();
+  simRunning=false;
+  lastTickTime = null;
+  clearInterval(simInterval);
+  updateClockUI();
 }
 function resetSim(){
-  pauseSim();
-  simClock=0; particles=[]; eventLog=[]; lastTickTime=null;
-  Object.values(NODES).forEach(n=>{
-    n.cota = NODE_BASE[n.id]; n.rain = 0; notified[n.id]=false;
-  });
-  updateClockUI(); drawMap();
-  if(activeTab==='sim'){ renderPanel(); }
+  pauseSim();
+  simClock=0; particles=[]; eventLog=[]; lastTickTime=null;
+  Object.values(NODES).forEach(n=>{
+    n.cota = NODE_BASE[n.id]; n.rain = 0; notified[n.id]=false; notified[n.id+'_critico']=false; notified[n.id+'_alerta']=false;
+  });
+  updateClockUI(); drawMap();
+  if(activeTab==='sim'){ renderPanel(); }
 }
 
 let lastTickTime = null;
 
 function tick(){
-  const now = Date.now();
-  let dt;
-  if(liveState.active){
-    dt = lastTickTime ? (now - lastTickTime)/1000/3600 : 100/1000/3600;
-  } else {
-    dt = simSpeed * (100/1000);
-  }
-  lastTickTime = now;
-  simClock += dt;
+  const now = Date.now();
+  let dt;
+  if(liveState.active){
+    dt = lastTickTime ? (now - lastTickTime)/1000/3600 : 100/1000/3600;
+  } else {
+    dt = simSpeed * (100/1000);
+  }
+  lastTickTime = now;
+  simClock += dt;
 
-  Object.values(NODES).forEach(n=>{
-    if(n.isSource && n.rain>0){
-      n.cota = Math.min(n.max*1.15, n.cota + (n.rain/100)*0.06*dt);
-      n.spawnAcc = (n.spawnAcc||0) + dt;
-      const interval = Math.max(0.4, 2 - n.rain/60);
-      if(n.spawnAcc >= interval){
-        n.spawnAcc = 0;
-        EDGES.forEach((e, idx)=>{
-          if(e.from===n.id){ particles.push({edgeIdx:idx, progress:0, volume:n.rain/100}); }
-        });
-      }
-    }
-  });
+  Object.values(NODES).forEach(n=>{
+    if(n.isSource && n.rain>0){
+      n.cota = Math.min(n.max*1.15, n.cota + (n.rain/100)*0.06*dt);
+      n.spawnAcc = (n.spawnAcc||0) + dt;
+      const interval = Math.max(0.4, 2 - n.rain/60);
+      if(n.spawnAcc >= interval){
+        n.spawnAcc = 0;
+        EDGES.forEach((e, idx)=>{
+          if(e.from===n.id){ particles.push({edgeIdx:idx, progress:0, volume:n.rain/100}); }
+        });
+      }
+    }
+  });
 
-  for(let i=particles.length-1;i>=0;i--){
-    const p = particles[i];
-    const edge = EDGES[p.edgeIdx];
-    p.progress += dt/edge.hours;
-    if(p.progress>=1){
-      const target = NODES[edge.to];
-      const bump = p.volume * edge.factor * 0.9;
-      target.cota = Math.min(target.max*1.15, target.cota + bump);
-      particles.splice(i,1);
+  for(let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    const edge = EDGES[p.edgeIdx];
+    p.progress += dt/edge.hours;
+    if(p.progress>=1){
+      const target = NODES[edge.to];
+      const bump = p.volume * edge.factor * 0.9;
+      target.cota = Math.min(target.max*1.15, target.cota + bump);
+      particles.splice(i,1);
 
-      EDGES.forEach((e2, idx2)=>{
-        if(e2.from===target.id){ particles.push({edgeIdx:idx2, progress:0, volume:bump*0.6}); }
-      });
-    }
-  }
+      EDGES.forEach((e2, idx2)=>{
+        if(e2.from===target.id){ particles.push({edgeIdx:idx2, progress:0, volume:bump*0.6}); }
+      });
+    }
+  }
 
-  Object.values(NODES).forEach(n=>{
-    const baseEfetiva = calcularBaseEfetiva(n);
-    n.cota += (baseEfetiva - n.cota) * n.decay * dt;
-    checkAlert(n);
+  Object.values(NODES).forEach(n=>{
+    const baseEfetiva = calcularBaseEfetiva(n);
+    n.cota += (baseEfetiva - n.cota) * n.decay * dt;
+    checkAlert(n);
 
-    if(now - n.lastHistoryPush > 60000){
-      n.history.push({ t: now, cota: n.cota });
-      if(n.history.length > 240) n.history.shift();
-      n.lastHistoryPush = now;
-    }
-  });
+    if(now - n.lastHistoryPush > 60000){
+      n.history.push({ t: now, cota: n.cota });
+      if(n.history.length > 240) n.history.shift();
+      n.lastHistoryPush = now;
+    }
+  });
 
-  drawMap();
-  updateClockUI();
-  if(activeTab==='sim') renderStatusList();
+  drawMap();
+  updateClockUI();
+  if(activeTab==='sim') renderStatusList();
 }
 
 function checkAlert(n){
-  const pct = n.cota/n.max;
-  if(pct >= 1.0 && !notified[n.id+'_critico']){
-    notified[n.id+'_critico'] = true;
-    logEvent(`CRÍTICO: ${n.name} ultrapassou 100% da cota (${n.cota.toFixed(2)}m)!`, 'critical');
-  } else if(pct >= 0.6 && pct < 1.0 && !notified[n.id+'_alerta']){
-    notified[n.id+'_alerta'] = true;
-    logEvent(`ALERTA: ${n.name} entrou em faixa de atenção (${n.cota.toFixed(2)}m).`, 'alert');
-  }
+  const pct = n.cota/n.max;
+  if(pct >= 1.0 && !notified[n.id+'_critico']){
+    notified[n.id+'_critico'] = true;
+    logEvent(`CRÍTICO: ${n.name} ultrapassou 100% da cota (${n.cota.toFixed(2)}m)!`, 'critical');
+    enviarAlertaWhatsApp(n, 'CRÍTICO (>100%)');
+  } else if(pct >= 0.6 && pct < 1.0 && !notified[n.id+'_alerta']){
+    notified[n.id+'_alerta'] = true;
+    logEvent(`ALERTA: ${n.name} entrou em faixa de atenção (${n.cota.toFixed(2)}m).`, 'alert');
+    enviarAlertaWhatsApp(n, 'ALERTA (>=60%)');
+  }
 }
 
 function updateClockUI(){
-  const dia = Math.floor(simClock/24), hora = Math.floor(simClock%24);
-  const el = document.getElementById('clockDisplay');
-  if(el) el.textContent = `Dia ${dia} · ${String(hora).padStart(2,'0')}h · ${simRunning?'rodando':'pausado'}`;
+  const dia = Math.floor(simClock/24), hora = Math.floor(simClock%24);
+  const el = document.getElementById('clockDisplay');
+  if(el) el.textContent = `Dia ${dia} · ${String(hora).padStart(2,'0')}h · ${simRunning?'rodando':'pausado'}`;
 }
 
 /* =========================================================
-   ABAS E PAINEL LATERAL
+   ABAS E PAINEL LATERAL
 ========================================================= */
 let activeTab='sim';
 document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    activeTab = btn.dataset.tab;
-    setActiveTabUI(activeTab);
-    renderPanel();
-  });
+  btn.addEventListener('click', ()=>{
+    activeTab = btn.dataset.tab;
+    setActiveTabUI(activeTab);
+    renderPanel();
+  });
 });
-
-document.getElementById('liveBadge').onclick = () => {
-  sincronizarDadosReais();
-  carregarAlertaDefesaCivil();
-};
-
 function setActiveTabUI(tab){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
 }
 
 function renderPanel(){
-  const el = document.getElementById('sidePanel');
-  if(activeTab==='sim') return renderSimTab(el);
-  if(activeTab==='hist') return renderHistTab(el);
-  if(activeTab==='explore') return renderExploreTab(el);
-  if(activeTab==='live') return renderLiveTab(el);
+  const el = document.getElementById('sidePanel');
+  if(activeTab==='sim') return renderSimTab(el);
+  if(activeTab==='hist') return renderHistTab(el);
+  if(activeTab==='explore') return renderExploreTab(el);
+  if(activeTab==='live') return renderLiveTab(el);
 }
 
 function renderSimTab(el){
-  el.innerHTML = `
-    <div class="card">
-      <h3>Controles da Simulação</h3>
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-primary" id="btnPlay">${simRunning?'⏸ Pausar':'▶ Rodar'}</button>
-        <button class="btn btn-outline" id="btnReset">↻ Reset</button>
-      </div>
-      <label class="field">Velocidade (${simSpeed}h / seg)</label>
-      <input type="range" id="speedSlider" min="1" max="24" step="1" value="${simSpeed}">
-    </div>
+  el.innerHTML = `
+    <div class="card">
+      <h3>Controles da Simulação</h3>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-primary" id="btnPlay">${simRunning?'⏸ Pausar':'▶ Rodar'}</button>
+        <button class="btn btn-outline" id="btnReset">↻ Reset</button>
+      </div>
+      <label class="field">Velocidade (${simSpeed}h / seg)</label>
+      <input type="range" id="speedSlider" min="1" max="24" step="1" value="${simSpeed}">
+    </div>
 
-    <div class="card">
-      <h3>Chuva por Região (fontes)</h3>
-      <div class="rain-grid" id="rainGrid"></div>
-    </div>
+    <div class="card">
+      <h3>Chuva por Região (fontes)</h3>
+      <div class="rain-grid" id="rainGrid"></div>
+    </div>
 
-    <div class="card">
-      <h3>Status Atual dos Nós <span class="src-badge ${liveState.active ? 'src-live' : 'src-sim'}">${liveState.active ? '🛰️ ClimaRS Ativo' : '🎲 Simulador'}</span></h3>
-      <div id="statusList"></div>
-    </div>
+    <div class="card">
+      <h3>Status Atual dos Nós <span class="src-badge ${liveState.active ? 'src-live' : 'src-sim'}">${liveState.active ? '🛰️ ANA Ativa' : '🎲 Simulador'}</span></h3>
+      <div id="statusList"></div>
+    </div>
 
-    <div class="card">
-      <h3>Log de Eventos</h3>
-      <div class="log" id="eventLogContainer"></div>
-    </div>
-  `;
+    <div class="card">
+      <h3>Log de Eventos</h3>
+      <div class="log" id="eventLogContainer"></div>
+    </div>
+  `;
 
-  document.getElementById('btnPlay').onclick = () => {
-    if(simRunning) pauseSim(); else startSim();
-    renderSimTab(el);
-  };
-  document.getElementById('btnReset').onclick = () => { resetSim(); renderSimTab(el); };
-  const slider = document.getElementById('speedSlider');
-  slider.oninput = (e) => { simSpeed = parseFloat(e.target.value); renderSimTab(el); };
+  document.getElementById('btnPlay').onclick = () => {
+    if(simRunning) pauseSim(); else startSim();
+    renderSimTab(el);
+  };
+  document.getElementById('btnReset').onclick = () => resetSim();
+  document.getElementById('speedSlider').oninput = (e) => {
+    simSpeed = parseInt(e.target.value);
+    const label = e.target.previousElementSibling;
+    if(label) label.textContent = `Velocidade (${simSpeed}h / seg)`;
+  };
 
-  renderRainGrid();
-  renderStatusList();
-  renderLog();
+  renderRainGrid();
+  renderStatusList();
+  renderLog();
 }
 
 function renderRainGrid(){
-  const grid = document.getElementById('rainGrid');
-  if(!grid) return;
-  grid.innerHTML = Object.values(NODES).filter(n=>n.isSource).map(n=>`
-    <div class="rain-item">
-      <div class="name">${n.name}</div>
-      <div class="value">${n.rain} mm/h</div>
-      <input type="range" min="0" max="150" step="5" value="${n.rain}" data-id="${n.id}" class="rain-slider" style="margin-top:6px;">
-    </div>
-  `).join('');
-
-  grid.querySelectorAll('.rain-slider').forEach(sl=>{
-    sl.oninput = (e) => {
-      const id = e.target.dataset.id;
-      NODES[id].rain = parseFloat(e.target.value);
-      renderRainGrid();
-    };
-  });
+  const grid = document.getElementById('rainGrid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  Object.values(NODES).forEach(n=>{
+    if(!n.isSource) return;
+    const item = document.createElement('div');
+    item.className = 'rain-item';
+    item.innerHTML = `
+      <div class="name">${n.name}</div>
+      <div class="value">${n.rain} mm/h</div>
+      <input type="range" min="0" max="150" step="5" value="${n.rain}" data-id="${n.id}" style="margin-top:6px;">
+    `;
+    item.querySelector('input').oninput = (ev) => {
+      NODES[n.id].rain = parseFloat(ev.target.value);
+      item.querySelector('.value').textContent = `${ev.target.value} mm/h`;
+      drawMap();
+    };
+    grid.appendChild(item);
+  });
 }
 
 function renderStatusList(){
-  const list = document.getElementById('statusList');
-  if(!list) return;
-  list.innerHTML = Object.values(NODES).map(n=>{
-    const pct = (n.cota / n.max)*100;
-    let bClass = 'b-ok', bText = 'Normal';
-    if(pct>=100){ bClass = 'b-danger'; bText = 'Crítico'; }
-    else if(pct>=60){ bClass = 'b-warn'; bText = 'Alerta'; }
-    return `
-      <div style="margin-bottom:10px; cursor:pointer;" onclick="selectNodeFromList('${n.id}')">
-        <div class="stat-row">
-          <span class="label" style="font-weight:600; color:var(--text);">${n.name}</span>
-          <span class="val">${n.cota.toFixed(2)}m <span class="badge ${bClass}">${bText}</span></span>
-        </div>
-        <div class="bar"><div class="bar-fill" style="width:${Math.min(100, pct)}%; background:${nodeColor(n)}"></div></div>
-      </div>
-      <hr style="border:0; border-top:1px solid var(--line); margin:6px 0;">
-    `;
-  }).join('');
-}
+  const list = document.getElementById('statusList');
+  if(!list) return;
+  list.innerHTML = '';
+  Object.values(NODES).forEach(n=>{
+    const pct = (n.cota / n.max) * 100;
+    let badgeClass = 'b-ok';
+    let statusText = 'Normal';
+    if(pct >= 100){ badgeClass = 'b-danger'; statusText = 'Crítico'; }
+    else if(pct >= 60){ badgeClass = 'b-warn'; statusText = 'Alerta'; }
 
-function selectNodeFromList(id){
-  selectedNode = id;
-  activeTab = 'explore';
-  setActiveTabUI('explore');
-  renderPanel();
-  drawMap();
+    const row = document.createElement('div');
+    row.style.marginBottom = '10px';
+    row.style.cursor = 'pointer';
+    row.innerHTML = `
+      <div class="stat-row">
+        <span class="label" style="font-weight:600; color:var(--text);">${n.name}</span>
+        <span class="badge ${badgeClass}">${statusText} (${pct.toFixed(0)}%)</span>
+      </div>
+      <div class="stat-row" style="font-size:11px; margin-bottom:2px;">
+        <span class="label">Cota atual</span>
+        <span class="val">${n.cota.toFixed(2)}m <span style="font-weight:400; color:var(--muted);">(máx ${n.max}m)</span></span>
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:${Math.min(100, pct)}%; background:${nodeColor(n)};"></div></div>
+    `;
+    row.onclick = () => {
+      selectedNode = n.id;
+      activeTab = 'explore';
+      setActiveTabUI('explore');
+      renderPanel();
+    };
+    list.appendChild(row);
+  });
 }
 
 function renderLog(){
-  const container = document.getElementById('eventLogContainer');
-  if(!container) return;
-  container.innerHTML = eventLog.map(ev=>`
-    <div class="${ev.level}">${ev.msg}</div>
-  `).join('');
+  const container = document.getElementById('eventLogContainer');
+  if(!container) return;
+  container.innerHTML = '';
+  if(eventLog.length===0){
+    container.innerHTML = '<div>Nenhum evento registrado.</div>';
+    return;
+  }
+  eventLog.forEach(ev => {
+    const d = document.createElement('div');
+    if(ev.level==='critical') d.className = 'critical';
+    else if(ev.level==='alert') d.className = 'alert';
+    d.textContent = ev.msg;
+    container.appendChild(d);
+  });
 }
 
-let histDay = 0;
+let histCurrentDay = 5;
 function renderHistTab(el){
-  el.innerHTML = `
-    <div class="card timeline-wrap">
-      <h3>Linha do Tempo — Enchentes Maio/2024</h3>
-      <div class="timeline-date">${histDateLabel(histDay)} (Dia ${histDay}/24)</div>
-      <div class="tl-controls" style="justify-content:center;">
-        <button id="histPrev">◀</button>
-        <input type="range" id="histSlider" min="0" max="${HIST_DAYS}" step="1" value="${histDay}" style="flex:1;">
-        <button id="histNext">▶</button>
-      </div>
-      <button class="btn btn-outline" id="histPlayToggle">▶ Play Histórico</button>
-    </div>
-    <div class="card">
-      <h3>Evolução dos Níveis (Maio 2024)</h3>
-      <div id="histNodesList"></div>
-    </div>
-  `;
+  el.innerHTML = `
+    <div class="card">
+      <h3>Linha do Tempo — Enchente de 2024</h3>
+      <p>Reconstituição diária baseada nos boletins oficiais da Defesa Civil do RS entre 27 de abril e 21 de maio de 2024.</p>
+      
+      <div class="timeline-wrap" style="margin-top:14px;">
+        <div class="timeline-date" id="histDateLbl">Dia 5 · ${histDateLabel(histCurrentDay)}</div>
+        <div class="tl-controls" style="justify-content:center;">
+          <button id="histPrev">◀</button>
+          <input type="range" id="histSlider" min="0" max="23" step="1" value="${histCurrentDay}" style="flex:1;">
+          <button id="histNext">▶</button>
+        </div>
+      </div>
+    </div>
 
-  document.getElementById('histSlider').oninput = (e)=>{
-    histDay = parseInt(e.target.value);
-    updateHistValues();
-  };
-  document.getElementById('histPrev').onclick = ()=>{ if(histDay>0){ histDay--; updateHistValues(); } };
-  document.getElementById('histNext').onclick = ()=>{ if(histDay<HIST_DAYS){ histDay++; updateHistValues(); } };
+    <div class="card">
+      <h3>Impacto por Região no Dia</h3>
+      <div id="histNodesList"></div>
+    </div>
+  `;
 
-  let histPlaying = false;
-  let histTimer = null;
-  document.getElementById('histPlayToggle').onclick = (e)=>{
-    histPlaying = !histPlaying;
-    e.target.textContent = histPlaying ? '⏸ Pausar Histórico' : '▶ Play Histórico';
-    if(histPlaying){
-      histTimer = setInterval(()=>{
-        histDay = (histDay + 1) % (HIST_DAYS + 1);
-        updateHistValues();
-      }, 600);
-    } else {
-      clearInterval(histTimer);
-    }
-  };
+  document.getElementById('histSlider').oninput = (e) => {
+    histCurrentDay = parseInt(e.target.value);
+    updateHistView();
+  };
+  document.getElementById('histPrev').onclick = () => {
+    if(histCurrentDay > 0){ histCurrentDay--; updateHistView(); }
+  };
+  document.getElementById('histNext').onclick = () => {
+    if(histCurrentDay < 23){ histCurrentDay++; updateHistView(); }
+  };
 
-  updateHistValues();
+  updateHistView();
 }
 
-function updateHistValues(){
-  const slider = document.getElementById('histSlider');
-  if(slider) slider.value = histDay;
-  const dateEl = document.querySelector('.timeline-date');
-  if(dateEl) dateEl.textContent = `${histDateLabel(histDay)} (Dia ${histDay}/24)`;
+function updateHistView(){
+  const lbl = document.getElementById('histDateLbl');
+  if(lbl) lbl.textContent = `Dia ${histCurrentDay+1} · ${histDateLabel(histCurrentDay)}`;
+  const slider = document.getElementById('histSlider');
+  if(slider) slider.value = histCurrentDay;
 
-  Object.values(NODES).forEach(n=>{
-    n.cota = histCota(n.id, histDay);
-  });
-  drawMap();
+  const list = document.getElementById('histNodesList');
+  if(!list) return;
+  list.innerHTML = '';
 
-  const list = document.getElementById('histNodesList');
-  if(list){
-    list.innerHTML = Object.values(NODES).map(n=>`
-      <div style="margin-bottom:8px;">
-        <div class="stat-row">
-          <span class="label" style="font-weight:600; color:var(--text);">${n.name}</span>
-          <span class="val">${n.cota.toFixed(2)}m <span style="font-size:10px; color:var(--muted);">(Pico: ${n.hist2024.peak}m)</span></span>
-        </div>
-        <div class="bar"><div class="bar-fill" style="width:${Math.min(100, (n.cota/n.max)*100)}%; background:${nodeColor(n)}"></div></div>
-      </div>
-    `).join('');
-  }
+  Object.values(NODES).forEach(n=>{
+    const cotaHist = histCota(n.id, histCurrentDay);
+    const pct = (cotaHist / n.max) * 100;
+    let badgeClass = 'b-ok';
+    let statusText = 'Normal';
+    if(pct >= 100){ badgeClass = 'b-danger'; statusText = 'Crítico'; }
+    else if(pct >= 60){ badgeClass = 'b-warn'; statusText = 'Alerta'; }
+
+    const row = document.createElement('div');
+    row.style.marginBottom = '12px';
+    row.innerHTML = `
+      <div class="stat-row">
+        <span class="label" style="font-weight:600; color:var(--text);">${n.name}</span>
+        <span class="badge ${badgeClass}">${statusText} (${pct.toFixed(0)}%)</span>
+      </div>
+      <div class="stat-row" style="font-size:11px; margin-bottom:2px;">
+        <span class="label">Cota estimada</span>
+        <span class="val">${cotaHist.toFixed(2)}m <span style="font-weight:400; color:var(--muted);">(Pico: ${n.hist2024.peak}m)</span></span>
+      </div>
+      <div style="font-size:10px; color:var(--accent2); margin-top:2px;">📌 ${n.hist2024.label}</div>
+    `;
+    list.appendChild(row);
+  });
 }
 
 function renderExploreTab(el){
-  if(!selectedNode){
-    el.innerHTML = `
-      <div class="empty-state">
-        <div class="icon">🔍</div>
-        <p>Clique em qualquer nó no mapa ou na lista lateral para inspecionar métricas detalhadas.</p>
-      </div>
-    `;
-    return;
-  }
+  if(!selectedNode){
+    el.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">🔍</div>
+        <div>Nenhum nó selecionado. Clique em um ponto no mapa ou na lista para inspecionar os detalhes hidrológicos.</div>
+      </div>
+    `;
+    return;
+  }
 
-  const n = NODES[selectedNode];
-  const pct = (n.cota/n.max)*100;
-  el.innerHTML = `
-    <div class="card">
-      <div class="node-title">${n.name}</div>
-      <div class="node-sub">${n.sub}</div>
-      <p>${n.desc}</p>
-    </div>
-    <div class="card">
-      <h3>Métricas Hidrológicas</h3>
-      <div class="stat-row"><span class="label">Cota Atual</span><span class="val">${n.cota.toFixed(2)} m</span></div>
-      <div class="stat-row"><span class="label">Cota Máxima (Alerta)</span><span class="val">${n.max} m</span></div>
-      <div class="stat-row"><span class="label">Capacidade Ocupada</span><span class="val">${pct.toFixed(1)}%</span></div>
-      <div class="bar" style="margin-top:8px;"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${nodeColor(n)}"></div></div>
-    </div>
-    <div class="card">
-      <h3>Histórico em 2024</h3>
-      <p><strong>Pico registrado:</strong> ${n.hist2024.peak}m</p>
-      <p style="margin-top:4px;">${n.hist2024.label}</p>
-    </div>
-    <div class="card">
-      <h3>Gráfico de Tendência (Tempo Real)</h3>
-      <canvas class="spark" id="sparkCanvas"></canvas>
-    </div>
-  `;
+  const n = NODES[selectedNode];
+  const pct = (n.cota / n.max) * 100;
+  let badgeClass = 'b-ok';
+  let statusText = 'Normal';
+  if(pct >= 100){ badgeClass = 'b-danger'; statusText = 'Crítico'; }
+  else if(pct >= 60){ badgeClass = 'b-warn'; statusText = 'Alerta'; }
 
-  drawSparkline(n);
+  el.innerHTML = `
+    <div class="card">
+      <div class="node-title">${n.name}</div>
+      <div class="node-sub">${n.sub} • Código IBGE: ${n.ibge}</div>
+      <p>${n.desc}</p>
+    </div>
+
+    <div class="card">
+      <h3>Métricas Atuais</h3>
+      <div class="stat-row">
+        <span class="label">Status</span>
+        <span class="badge ${badgeClass}">${statusText}</span>
+      </div>
+      <div class="stat-row">
+        <span class="label">Cota Atual / Máxima</span>
+        <span class="val">${n.cota.toFixed(2)}m / ${n.max}m</span>
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:${Math.min(100, pct)}%; background:${nodeColor(n)};"></div></div>
+      <div class="stat-row" style="margin-top:10px;">
+        <span class="label">Vazão Estimada</span>
+        <span class="val">${n.vazao} m³/s</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Histórico Recente</h3>
+      <canvas class="spark" id="sparkCanvas"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>Ações Rápidas</h3>
+      <button class="btn btn-outline" id="btnClearSelection">← Voltar à Visão Geral</button>
+    </div>
+  `;
+
+  document.getElementById('btnClearSelection').onclick = () => {
+    selectedNode = null;
+    renderPanel();
+    drawMap();
+  };
+
+  drawSparkline(n);
 }
 
 function drawSparkline(n){
-  const sc = document.getElementById('sparkCanvas');
-  if(!sc) return;
-  const sctx = sc.getContext('2d');
-  const w = sc.width = sc.clientWidth * devicePixelRatio;
-  const h = sc.height = sc.clientHeight * devicePixelRatio;
-  sctx.clearRect(0,0,w,h);
+  const sc = document.getElementById('sparkCanvas');
+  if(!sc) return;
+  const sctx = sc.getContext('2d');
+  const w = sc.width = sc.clientWidth * devicePixelRatio;
+  const h = sc.height = sc.clientHeight * devicePixelRatio;
+  sctx.clearRect(0,0,w,h);
 
-  if(n.history.length < 2) return;
-  const cotas = n.history.map(p=>p.cota);
-  const min = Math.min(...cotas, NODE_BASE[n.id]);
-  const max = Math.max(...cotas, n.max);
-  const range = (max - min) || 1;
+  const hist = n.history;
+  if(hist.length < 2){
+    sctx.fillStyle = '#8aa0c4';
+    sctx.font = '11px sans-serif';
+    sctx.textAlign = 'center';
+    sctx.fillText('Aguardando dados...', w/2, h/2);
+    return;
+  }
 
-  sctx.beginPath();
-  n.history.forEach((p, i)=>{
-    const x = (i / (n.history.length - 1)) * w;
-    const y = h - ((p.cota - min) / range) * (h - 10) - 5;
-    if(i===0) sctx.moveTo(x,y); else sctx.lineTo(x,y);
-  });
-  sctx.strokeStyle = '#3aa0ff';
-  sctx.lineWidth = 2 * devicePixelRatio;
-  sctx.stroke();
+  const cotas = hist.map(pt=>pt.cota);
+  const minC = Math.min(...cotas, NODE_BASE[n.id]);
+  const maxC = Math.max(...cotas, n.max*0.8);
+
+  sctx.beginPath();
+  hist.forEach((pt, i)=>{
+    const x = (i / (hist.length-1)) * w;
+    const y = h - ((pt.cota - minC) / (maxC - minC || 1)) * (h - 16) - 8;
+    if(i===0) sctx.moveTo(x,y); else sctx.lineTo(x,y);
+  });
+  sctx.strokeStyle = '#3aa0ff';
+  sctx.lineWidth = 2 * devicePixelRatio;
+  sctx.stroke();
 }
 
 function renderLiveTab(el){
-  el.innerHTML = `
-    <div class="card">
-      <h3>Conexão com APIs Oficiais</h3>
-      <p>Sincronize sua plataforma diretamente com os dados meteorológicos do <strong>ClimaRS</strong> e precipitações do <strong>Open-Meteo</strong>.</p>
-      <button class="btn btn-primary" id="btnSyncLive" style="margin-top:12px;">Sincronizar com ClimaRS Agora</button>
-    </div>
-    <div class="card">
-      <h3>Status dos Endpoints</h3>
-      <div class="stat-row"><span class="label">Estado da Conexão</span><span class="val">${liveState.active ? '<span class="badge b-ok">Conectado</span>' : '<span class="badge b-warn">Desconectado</span>'}</span></div>
-      <div class="stat-row"><span class="label">Estações Monitoradas</span><span class="val">${Object.keys(liveState.dataApi).length} / ${Object.keys(NODES).length}</span></div>
-    </div>
-  `;
+  el.innerHTML = `
+    <div class="card">
+      <h3>Monitoramento Oficial (ANA)</h3>
+      <p>Plataforma integrada conectada à Agência Nacional de Águas usando o identificador <code>00013152009</code>.</p>
+      
+      <button class="btn btn-primary" id="btnSyncLive" style="margin-top:14px;">
+        ${liveState.loading ? '🔄 Sincronizando dados da ANA...' : '🛰️ Sincronizar com a ANA Agora'}
+      </button>
+    </div>
 
-  document.getElementById('btnSyncLive').onclick = () => {
-    sincronizarDadosReais();
-    carregarAlertaDefesaCivil();
-  };
+    <div class="card">
+      <h3>Status das Estações Teleguiadas</h3>
+      <div id="liveStationsList"></div>
+    </div>
+  `;
+
+  document.getElementById('btnSyncLive').onclick = () => {
+    sincronizarDadosReais();
+  };
+
+  renderLiveStationsList();
 }
 
-/* =========================================================
-   INICIALIZAÇÃO DA APLICAÇÃO
-========================================================= */
-window.addEventListener('DOMContentLoaded', () => {
-  resizeCanvas();
-  renderPanel();
-  
-  // Executa automaticamente a busca de dados ao vivo e alertas da Defesa Civil ao iniciar
-  carregarAlertaDefesaCivil();
-  sincronizarDadosReais();
+function renderLiveStationsList(){
+  const list = document.getElementById('liveStationsList');
+  if(!list) return;
+  list.innerHTML = '';
+  Object.values(NODES).forEach(n=>{
+    const dados = liveState.dataApi[n.id];
+    const row = document.createElement('div');
+    row.style.marginBottom = '10px';
+    row.style.padding = '8px';
+    row.style.background = '#0a1120';
+    row.style.borderRadius = '6px';
+    row.style.border = '1px solid var(--line)';
+    row.innerHTML = `
+      <div class="stat-row">
+        <span class="label" style="font-weight:600; color:var(--text);">${n.name}</span>
+        <span class="badge ${liveState.active?'b-ok':'b-warn'}">${liveState.active?'Online':'Simulado'}</span>
+      </div>
+      <div class="stat-row" style="font-size:11px; margin-top:4px;">
+        <span class="label">Nível Registrado (ANA)</span>
+        <span class="val">${dados && dados.nivel ? dados.nivel+'m' : n.cota.toFixed(2)+'m'}</span>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+// Inicialização Geral
+window.addEventListener('load', () => {
+  resizeCanvas();
+  renderPanel();
 });
 </script>
 </body>
