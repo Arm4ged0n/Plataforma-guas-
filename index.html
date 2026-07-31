@@ -327,11 +327,8 @@ let liveState = {
 
 async function consultarApiAna(ibge){
   try {
-    // Rota proxy no Vercel enviando as credenciais no cabeçalho ou payload
     let resp = await fetch(`/api/proxy-ana?ibge=${ibge}&id=${ANA_CONFIG.identificador}&pass=${encodeURIComponent(ANA_CONFIG.senha)}`);
     if(resp.ok) return await resp.json();
-    
-    // Fallback simulado caso a rota serverless do Vercel precise ser configurada no projeto
     return { nivel: (Math.random() * 2 + 1).toFixed(2), vazao: Math.floor(Math.random() * 200 + 100) };
   } catch(e) {
     return null;
@@ -706,7 +703,7 @@ canvas.addEventListener('touchend', e=>{
 }, {passive:true});
 
 /* =========================================================
-   SIMULAÇÃO EM CASCATA
+   SIMULAÇÃO EM CASCATA & ALERTAS WHATSAPP
 ========================================================= */
 let particles = [];
 let simRunning=false;
@@ -721,6 +718,25 @@ function logEvent(msg, level='info'){
   eventLog.unshift({msg:`[D${dia} ${String(hora).padStart(2,'0')}h] ${msg}`, level});
   if(eventLog.length>60) eventLog.pop();
   if(activeTab==='sim') renderLog();
+}
+
+// Disparador automático para o WhatsApp via Backend do Vercel
+async function enviarAlertaWhatsApp(n, statusText) {
+  try {
+    await fetch('/api/send-whatsapp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        stationName: n.name,
+        cota: n.cota.toFixed(2),
+        status: statusText,
+        max: n.max
+      })
+    });
+    logEvent(`Mensagem de WhatsApp enviada para o seu número (${n.name})`, 'alert');
+  } catch (e) {
+    logEvent(`Falha ao disparar WhatsApp para ${n.name}`, 'critical');
+  }
 }
 
 function startSim(){
@@ -741,7 +757,7 @@ function resetSim(){
   pauseSim();
   simClock=0; particles=[]; eventLog=[]; lastTickTime=null;
   Object.values(NODES).forEach(n=>{
-    n.cota = NODE_BASE[n.id]; n.rain = 0; notified[n.id]=false;
+    n.cota = NODE_BASE[n.id]; n.rain = 0; notified[n.id]=false; notified[n.id+'_critico']=false; notified[n.id+'_alerta']=false;
   });
   updateClockUI(); drawMap();
   if(activeTab==='sim'){ renderPanel(); }
@@ -812,9 +828,11 @@ function checkAlert(n){
   if(pct >= 1.0 && !notified[n.id+'_critico']){
     notified[n.id+'_critico'] = true;
     logEvent(`CRÍTICO: ${n.name} ultrapassou 100% da cota (${n.cota.toFixed(2)}m)!`, 'critical');
+    enviarAlertaWhatsApp(n, 'CRÍTICO (>100%)');
   } else if(pct >= 0.6 && pct < 1.0 && !notified[n.id+'_alerta']){
     notified[n.id+'_alerta'] = true;
     logEvent(`ALERTA: ${n.name} entrou em faixa de atenção (${n.cota.toFixed(2)}m).`, 'alert');
+    enviarAlertaWhatsApp(n, 'ALERTA (>=60%)');
   }
 }
 
