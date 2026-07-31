@@ -17,7 +17,7 @@
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     height:100dvh; overflow:hidden;
   }
-  .app{display:grid; grid-template-rows:auto auto 1fr; height:100dvh; height:100vh;}
+  .app{display:grid; grid-template-rows:auto auto 1fr auto; height:100dvh; height:100vh;}
 
   /* HEADER */
   header{
@@ -150,7 +150,7 @@
 
   label.field{display:block; font-size:11px; color:var(--muted); margin-bottom:4px; margin-top:10px;}
   input[type=range]{width:100%; accent-color:var(--accent);}
-  input[type=number]{
+  input[type=number], input[type=text]{
     width:100%; background:#0a1120; border:1px solid var(--line); color:var(--text);
     padding:6px 8px; border-radius:6px; font-size:12px;
   }
@@ -239,6 +239,10 @@
       <!-- conteúdo injetado via JS conforme aba ativa -->
     </aside>
   </main>
+
+  <footer style="padding:12px 18px; border-top:1px solid var(--line); text-align:center; font-size:11px; color:var(--muted); background:var(--panel);">
+    Todos os direitos reservados a Sandro Fagundes
+  </footer>
 </div>
 
 <script>
@@ -311,13 +315,8 @@ Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
 Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; });
 
 /* =========================================================
-   ESTADO DA API E DADOS REAIS (CREDENCIAIS ANA)
+   ESTADO DA API E DADOS REAIS (SEGURO VIA BACKEND)
 ========================================================= */
-const ANA_CONFIG = {
-  identificador: '00013152009',
-  senha: '22vhe_we'
-};
-
 let liveState = {
   active: false,
   loading: false,
@@ -327,7 +326,7 @@ let liveState = {
 
 async function consultarApiAna(ibge){
   try {
-    let resp = await fetch(`/api/proxy-ana?ibge=${ibge}&id=${ANA_CONFIG.identificador}&pass=${encodeURIComponent(ANA_CONFIG.senha)}`);
+    let resp = await fetch(`/api/proxy-ana?ibge=${ibge}`);
     if(resp.ok) return await resp.json();
     return { nivel: (Math.random() * 2 + 1).toFixed(2), vazao: Math.floor(Math.random() * 200 + 100) };
   } catch(e) {
@@ -720,20 +719,21 @@ function logEvent(msg, level='info'){
   if(activeTab==='sim') renderLog();
 }
 
-// Disparador automático para o WhatsApp via Backend do Vercel
 async function enviarAlertaWhatsApp(n, statusText) {
+  const userPhone = localStorage.getItem('user_whatsapp_phone') || '51984997716';
   try {
     await fetch('/api/send-whatsapp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        phone: userPhone,
         stationName: n.name,
         cota: n.cota.toFixed(2),
         status: statusText,
         max: n.max
       })
     });
-    logEvent(`Mensagem de WhatsApp enviada para o seu número (${n.name})`, 'alert');
+    logEvent(`Mensagem de WhatsApp enviada para (${userPhone}) referente a ${n.name}`, 'alert');
   } catch (e) {
     logEvent(`Falha ao disparar WhatsApp para ${n.name}`, 'critical');
   }
@@ -878,6 +878,13 @@ function renderSimTab(el){
     </div>
 
     <div class="card">
+      <h3>Cadastro de WhatsApp (Alertas)</h3>
+      <label class="field">Seu Número (com DDD)</label>
+      <input type="text" id="whatsappInput" value="${localStorage.getItem('user_whatsapp_phone') || '51984997716'}" placeholder="Ex: 51984997716">
+      <button class="btn btn-outline" id="btnSavePhone" style="margin-top:6px;">Salvar Número</button>
+    </div>
+
+    <div class="card">
       <h3>Chuva por Região (fontes)</h3>
       <div class="rain-grid" id="rainGrid"></div>
     </div>
@@ -902,6 +909,11 @@ function renderSimTab(el){
     simSpeed = parseInt(e.target.value);
     const label = e.target.previousElementSibling;
     if(label) label.textContent = `Velocidade (${simSpeed}h / seg)`;
+  };
+  document.getElementById('btnSavePhone').onclick = () => {
+    const val = document.getElementById('whatsappInput').value.trim();
+    localStorage.setItem('user_whatsapp_phone', val);
+    logEvent(`Número de WhatsApp atualizado para: ${val}`, 'info');
   };
 
   renderRainGrid();
@@ -1153,7 +1165,7 @@ function renderLiveTab(el){
   el.innerHTML = `
     <div class="card">
       <h3>Monitoramento Oficial (ANA)</h3>
-      <p>Plataforma integrada conectada à Agência Nacional de Águas usando o identificador <code>00013152009</code>.</p>
+      <p>Plataforma integrada conectada à Agência Nacional de Águas com credenciais blindadas no backend.</p>
       
       <button class="btn btn-primary" id="btnSyncLive" style="margin-top:14px;">
         ${liveState.loading ? '🔄 Sincronizando dados da ANA...' : '🛰️ Sincronizar com a ANA Agora'}
