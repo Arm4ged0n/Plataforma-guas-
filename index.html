@@ -241,7 +241,7 @@
   </main>
 
   <footer style="padding:12px 18px; border-top:1px solid var(--line); text-align:center; font-size:11px; color:var(--muted); background:var(--panel);">
-    Todos os direitos reservados a Sandro Fagundes
+    Todos os direitos reservados a Sandro de Souza Fagundes
   </footer>
 </div>
 
@@ -315,7 +315,7 @@ Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
 Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; });
 
 /* =========================================================
-   ESTADO DA API E DADOS REAIS (SEGURO VIA BACKEND)
+   ESTADO DA API E DADOS REAIS (SEGURO VIA BACKEND / VERCEL ENV)
 ========================================================= */
 let liveState = {
   active: false,
