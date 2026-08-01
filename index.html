@@ -192,6 +192,75 @@
   .empty-state{text-align:center; color:var(--muted); font-size:12px; padding:30px 10px;}
   .empty-state .icon{font-size:30px; margin-bottom:10px;}
 
+  /* STATION VISUAL & REALTIME BUTTON STYLES */
+  .station-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .water-level-pill {
+    background: #22c55e;
+    color: #fff;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+  }
+
+  .water-level-pill.red {
+    background: #ef4444;
+  }
+
+  .level-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .level-bars .bar {
+    width: 24px;
+    height: 6px;
+    background: #475569;
+    border-radius: 2px;
+  }
+
+  .level-bars .bar.active {
+    background: #22c55e;
+  }
+
+  .level-bars .bar.active.red {
+    background: #ef4444;
+  }
+
+  .realtime-btn {
+    background: #334155;
+    color: #94a3b8;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+  }
+
+  .realtime-btn:hover {
+    background: #475569;
+    color: #fff;
+    border-color: #64748b;
+  }
+
+  .realtime-btn.active {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border-color: rgba(34, 197, 94, 0.4);
+  }
+
   ::-webkit-scrollbar{width:6px;}
   ::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
 </style>
@@ -876,384 +945,294 @@ function updateClockUI(){
 }
 
 /* =========================================================
-   ABAS E PAINEL LATERAL
+   GERENCIAMENTO DE ABAS E PAINEL LATERAL
 ========================================================= */
-let activeTab='sim';
-document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    activeTab = btn.dataset.tab;
-    setActiveTabUI(activeTab);
-    renderPanel();
-  });
-});
+let activeTab = 'sim';
+
 function setActiveTabUI(tab){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab===tab);
+  });
+  renderPanel();
 }
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.onclick = () => setActiveTabUI(btn.dataset.tab);
+});
 
 function renderPanel(){
-  const el = document.getElementById('sidePanel');
-  if(activeTab==='sim') return renderSimTab(el);
-  if(activeTab==='hist') return renderHistTab(el);
-  if(activeTab==='explore') return renderExploreTab(el);
-  if(activeTab==='live') return renderLiveTab(el);
+  const p = document.getElementById('sidePanel');
+  if(!p) return;
+  if(activeTab==='sim') renderSimPanel(p);
+  else if(activeTab==='hist') renderHistPanel(p);
+  else if(activeTab==='explore') renderExplorePanel(p);
+  else if(activeTab==='live') renderLivePanel(p);
 }
 
-function renderSimTab(el){
-  el.innerHTML = `
+function renderSimPanel(p){
+  p.innerHTML = `
     <div class="card">
-      <h3>Controles da Simulação</h3>
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-primary" id="btnPlay">${simRunning?'⏸ Pausar':'▶ Rodar'}</button>
-        <button class="btn btn-outline" id="btnReset">↻ Reset</button>
+      <h3>Controle da Simulação</h3>
+      <div style="display:flex; gap:6px; margin-bottom:10px;">
+        <button class="btn btn-primary" style="margin-top:0;" onclick="${simRunning?'pauseSim()':'startSim()'}">${simRunning?'⏸ Pausar':'▶ Iniciar'}</button>
+        <button class="btn btn-outline" style="margin-top:0;" onclick="resetSim()">⟲ Resetar</button>
       </div>
-      <label class="field">Velocidade (${simSpeed}h / seg)</label>
-      <input type="range" id="speedSlider" min="1" max="24" step="1" value="${simSpeed}">
+      <label class="field">Velocidade: <span id="speedVal">${simSpeed}</span>x</label>
+      <input type="range" min="1" max="24" value="${simSpeed}" oninput="simSpeed=parseFloat(this.value); document.getElementById('speedVal').textContent=this.value;">
     </div>
 
     <div class="card">
-      <h3>Configuração de Alertas (WhatsApp & E-mail)</h3>
-      <label class="field">Seu Número WhatsApp (com DDD)</label>
-      <input type="text" id="whatsappInput" value="${localStorage.getItem('user_whatsapp_phone') || '51984997716'}" placeholder="Ex: 51984997716">
-      <label class="field">Seu E-mail para Alertas</label>
-      <input type="email" id="emailInput" value="${localStorage.getItem('user_email') || 'sandro@exemplo.com'}" placeholder="Ex: seu-email@dominio.com">
-      <button class="btn btn-outline" id="btnSaveConfig" style="margin-top:8px;">Salvar Configurações</button>
+      <h3>Chuva nas Cabeceiras (mm/h)</h3>
+      <div class="rain-grid" style="margin-top:8px;">
+        ${Object.values(NODES).filter(n=>n.isSource).map(n=>`
+          <div class="rain-item">
+            <div class="name">${n.name}</div>
+            <div class="value"><span id="rain_val_${n.id}">${n.rain}</span> mm/h</div>
+            <input type="range" min="0" max="100" value="${n.rain}" style="margin-top:6px;" oninput="NODES['${n.id}'].rain=parseFloat(this.value); document.getElementById('rain_val_${n.id}').textContent=this.value;">
+          </div>
+        `).join('')}
+      </div>
     </div>
 
     <div class="card">
-      <h3>Chuva por Região (fontes)</h3>
-      <div class="rain-grid" id="rainGrid"></div>
-    </div>
-
-    <div class="card">
-      <h3>Status Atual dos Nós <span class="src-badge ${liveState.active ? 'src-live' : 'src-sim'}">${liveState.active ? '🛰️ ANA Ativa' : '🎲 Simulador'}</span></h3>
-      <div id="statusList"></div>
+      <h3>Status Atual dos Rios</h3>
+      <div id="statusList" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+        <!-- preenchido via loop -->
+      </div>
     </div>
 
     <div class="card">
       <h3>Log de Eventos</h3>
-      <div class="log" id="eventLogContainer"></div>
+      <div class="log" id="eventLogContainer" style="margin-top:8px;">
+        ${eventLog.map(e=>`<div class="${e.level}">${e.msg}</div>`).join('')}
+      </div>
     </div>
   `;
-
-  document.getElementById('btnPlay').onclick = () => {
-    if(simRunning) pauseSim(); else startSim();
-    renderSimTab(el);
-  };
-  document.getElementById('btnReset').onclick = () => resetSim();
-  document.getElementById('speedSlider').oninput = (e) => {
-    simSpeed = parseInt(e.target.value);
-    const label = e.target.previousElementSibling;
-    if(label) label.textContent = `Velocidade (${simSpeed}h / seg)`;
-  };
-  document.getElementById('btnSaveConfig').onclick = () => {
-    const valPhone = document.getElementById('whatsappInput').value.trim();
-    const valEmail = document.getElementById('emailInput').value.trim();
-    localStorage.setItem('user_whatsapp_phone', valPhone);
-    localStorage.setItem('user_email', valEmail);
-    logEvent(`Configurações de contato atualizadas (WhatsApp e E-mail).`, 'info');
-  };
-
-  renderRainGrid();
   renderStatusList();
-  renderLog();
-}
-
-function renderRainGrid(){
-  const grid = document.getElementById('rainGrid');
-  if(!grid) return;
-  grid.innerHTML = '';
-  Object.values(NODES).forEach(n=>{
-    if(!n.isSource) return;
-    const item = document.createElement('div');
-    item.className = 'rain-item';
-    item.innerHTML = `
-      <div class="name">${n.name}</div>
-      <div class="value">${n.rain} mm/h</div>
-      <input type="range" min="0" max="150" step="5" value="${n.rain}" data-id="${n.id}" style="margin-top:6px;">
-    `;
-    item.querySelector('input').oninput = (ev) => {
-      NODES[n.id].rain = parseFloat(ev.target.value);
-      item.querySelector('.value').textContent = `${ev.target.value} mm/h`;
-      drawMap();
-    };
-    grid.appendChild(item);
-  });
 }
 
 function renderStatusList(){
   const list = document.getElementById('statusList');
   if(!list) return;
-  list.innerHTML = '';
-  Object.values(NODES).forEach(n=>{
-    const pct = (n.cota / n.max) * 100;
-    let badgeClass = 'b-ok';
-    let statusText = 'Normal';
-    if(pct >= 100){ badgeClass = 'b-danger'; statusText = 'Crítico'; }
-    else if(pct >= 60){ badgeClass = 'b-warn'; statusText = 'Alerta'; }
-
-    const row = document.createElement('div');
-    row.style.marginBottom = '10px';
-    row.style.cursor = 'pointer';
-    row.innerHTML = `
-      <div class="stat-row">
-        <span class="label" style="font-weight:600; color:var(--text);">${n.name}</span>
-        <span class="badge ${badgeClass}">${statusText} (${pct.toFixed(0)}%)</span>
+  list.innerHTML = Object.values(NODES).map(n=>{
+    const pct = (n.cota/n.max)*100;
+    const badgeCls = pct>=100?'b-danger':(pct>=60?'b-warn':'b-ok');
+    const badgeText = pct>=100?'CRÍTICO':(pct>=60?'ALERTA':'NORMAL');
+    return `
+      <div style="background:#0a1120; border:1px solid var(--line); border-radius:6px; padding:8px; cursor:pointer;" onclick="selectedNode='${n.id}'; activeTab='explore'; setActiveTabUI('explore');">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <strong style="font-size:12px;">${n.name}</strong>
+          <span class="badge ${badgeCls}">${badgeText}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--muted);">
+          <span>Cota: <strong>${n.cota.toFixed(2)}m</strong> (máx ${n.max}m)</span>
+          <span>${pct.toFixed(0)}%</span>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${pct>=100?'var(--danger)':(pct>=60?'var(--accent2)':'var(--ok)')}"></div></div>
       </div>
-      <div class="stat-row" style="font-size:11px; margin-bottom:2px;">
-        <span class="label">Cota atual</span>
-        <span class="val">${n.cota.toFixed(2)}m <span style="font-weight:400; color:var(--muted);">(máx ${n.max}m)</span></span>
-      </div>
-      <div class="bar"><div class="bar-fill" style="width:${Math.min(100, pct)}%; background:${nodeColor(n)};"></div></div>
     `;
-    row.onclick = () => {
-      selectedNode = n.id;
-      activeTab = 'explore';
-      setActiveTabUI('explore');
-      renderPanel();
-    };
-    list.appendChild(row);
-  });
+  }).join('');
 }
 
 function renderLog(){
-  const container = document.getElementById('eventLogContainer');
-  if(!container) return;
-  container.innerHTML = '';
-  if(eventLog.length===0){
-    container.innerHTML = '<div>Nenhum evento registrado.</div>';
-    return;
-  }
-  eventLog.forEach(ev => {
-    const d = document.createElement('div');
-    if(ev.level==='critical') d.className = 'critical';
-    else if(ev.level==='alert') d.className = 'alert';
-    d.textContent = ev.msg;
-    container.appendChild(d);
-  });
+  const c = document.getElementById('eventLogContainer');
+  if(!c) return;
+  c.innerHTML = eventLog.map(e=>`<div class="${e.level}">${e.msg}</div>`).join('');
 }
 
-let histCurrentDay = 5;
-function renderHistTab(el){
-  el.innerHTML = `
+let histDaySlider = 5;
+function renderHistPanel(p){
+  p.innerHTML = `
     <div class="card">
-      <h3>Linha do Tempo — Enchente de 2024</h3>
-      <p>Reconstituição diária baseada nos boletins oficiais da Defesa Civil do RS entre 27 de abril e 21 de maio de 2024.</p>
+      <h3>Linha do Tempo — Enchente de Maio/2024</h3>
+      <p style="margin-top:6px;">Reconstrução baseada nos boletins oficiais da Defesa Civil e ANA durante o maior desastre climático do RS.</p>
       
-      <div class="timeline-wrap" style="margin-top:14px;">
-        <div class="timeline-date" id="histDateLbl">Dia 5 · ${histDateLabel(histCurrentDay)}</div>
-        <div class="tl-controls" style="justify-content:center;">
-          <button id="histPrev">◀</button>
-          <input type="range" id="histSlider" min="0" max="23" step="1" value="${histCurrentDay}" style="flex:1;">
-          <button id="histNext">▶</button>
+      <label class="field" style="margin-top:14px;">Selecione o Dia do Evento:</label>
+      <div class="timeline-wrap" style="margin-top:10px;">
+        <div class="timeline-date" id="histDateDisplay">${histDateLabel(histDaySlider)} (Dia ${histDaySlider})</div>
+        <div class="tl-controls">
+          <button onclick="changeHistDay(-1)">◀</button>
+          <input type="range" min="0" max="23" value="${histDaySlider}" style="flex:1;" oninput="histDaySlider=parseInt(this.value); updateHistDay();">
+          <button onclick="changeHistDay(1)">▶</button>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <h3>Impacto por Região no Dia</h3>
-      <div id="histNodesList"></div>
+      <h3>Cotas Registradas no Dia</h3>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;" id="histStationsList">
+        <!-- preenchido via updateHistDay -->
+      </div>
     </div>
   `;
-
-  document.getElementById('histSlider').oninput = (e) => {
-    histCurrentDay = parseInt(e.target.value);
-    updateHistView();
-  };
-  document.getElementById('histPrev').onclick = () => {
-    if(histCurrentDay > 0){ histCurrentDay--; updateHistView(); }
-  };
-  document.getElementById('histNext').onclick = () => {
-    if(histCurrentDay < 23){ histCurrentDay++; updateHistView(); }
-  };
-
-  updateHistView();
+  updateHistDay();
 }
 
-function updateHistView(){
-  const lbl = document.getElementById('histDateLbl');
-  if(lbl) lbl.textContent = `Dia ${histCurrentDay+1} · ${histDateLabel(histCurrentDay)}`;
-  const slider = document.getElementById('histSlider');
-  if(slider) slider.value = histCurrentDay;
+function changeHistDay(delta){
+  histDaySlider = Math.max(0, Math.min(23, histDaySlider+delta));
+  const inp = document.querySelector('input[type=range]');
+  if(inp) inp.value = histDaySlider;
+  updateHistDay();
+}
 
-  const list = document.getElementById('histNodesList');
-  if(!list) return;
-  list.innerHTML = '';
-
+function updateHistDay(){
+  const lbl = document.getElementById('histDateDisplay');
+  if(lbl) lbl.textContent = `${histDateLabel(histDaySlider)} (Dia ${histDaySlider})`;
+  
   Object.values(NODES).forEach(n=>{
-    const cotaHist = histCota(n.id, histCurrentDay);
-    const pct = (cotaHist / n.max) * 100;
-    let badgeClass = 'b-ok';
-    let statusText = 'Normal';
-    if(pct >= 100){ badgeClass = 'b-danger'; statusText = 'Crítico'; }
-    else if(pct >= 60){ badgeClass = 'b-warn'; statusText = 'Alerta'; }
-
-    const row = document.createElement('div');
-    row.style.marginBottom = '12px';
-    row.innerHTML = `
-      <div class="stat-row">
-        <span class="label" style="font-weight:600; color:var(--text);">${n.name}</span>
-        <span class="badge ${badgeClass}">${statusText} (${pct.toFixed(0)}%)</span>
-      </div>
-      <div class="stat-row" style="font-size:11px; margin-bottom:2px;">
-        <span class="label">Cota estimada</span>
-        <span class="val">${cotaHist.toFixed(2)}m <span style="font-weight:400; color:var(--muted);">(Pico: ${n.hist2024.peak}m)</span></span>
-      </div>
-      <div style="font-size:10px; color:var(--accent2); margin-top:2px;">📌 ${n.hist2024.label}</div>
-    `;
-    list.appendChild(row);
+    n.cota = histCota(n.id, histDaySlider);
   });
+  drawMap();
+
+  const container = document.getElementById('histStationsList');
+  if(!container) return;
+  container.innerHTML = Object.values(NODES).map(n=>{
+    const cotaHist = histCota(n.id, histDaySlider);
+    const pct = (cotaHist/n.max)*100;
+    return `
+      <div style="background:#0a1120; border:1px solid var(--line); border-radius:6px; padding:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+          <strong style="font-size:12px;">${n.name}</strong>
+          <span style="font-size:11px; color:var(--accent2);">${cotaHist.toFixed(2)}m (Pico: ${n.hist2024.peak}m)</span>
+        </div>
+        <div style="font-size:10.5px; color:var(--muted); margin-bottom:4px;">${n.hist2024.label}</div>
+        <div class="bar"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${pct>=100?'var(--danger)':(pct>=60?'var(--accent2)':'var(--ok)')}"></div></div>
+      </div>
+    `;
+  }).join('');
 }
 
-function renderExploreTab(el){
+function renderExplorePanel(p){
   if(!selectedNode){
-    el.innerHTML = `
+    p.innerHTML = `
       <div class="empty-state">
-        <div class="icon">🔍</div>
-        <div>Nenhum nó selecionado. Clique em um ponto no mapa ou na lista para inspecionar os detalhes hidrológicos.</div>
+        <div class="icon">📍</div>
+        <div>Nenhum nó selecionado</div>
+        <p style="margin-top:6px;">Clique em qualquer estação no mapa para inspecionar métricas detalhadas.</p>
       </div>
     `;
     return;
   }
-
   const n = NODES[selectedNode];
-  const pct = (n.cota / n.max) * 100;
-  let badgeClass = 'b-ok';
-  let statusText = 'Normal';
-  if(pct >= 100){ badgeClass = 'b-danger'; statusText = 'Crítico'; }
-  else if(pct >= 60){ badgeClass = 'b-warn'; statusText = 'Alerta'; }
-
-  el.innerHTML = `
+  const pct = (n.cota/n.max)*100;
+  p.innerHTML = `
     <div class="card">
-      <div class="node-title">${n.name}</div>
-      <div class="node-sub">${n.sub} • Código IBGE: ${n.ibge}</div>
-      <p>${n.desc}</p>
-      <div style="font-size:10.5px; color:var(--accent); margin-top:6px;">📍 Lat: ${n.lat}, Lon: ${n.lon}</div>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div class="node-title">${n.name}</div>
+          <div class="node-sub">${n.sub}</div>
+        </div>
+        <button class="btn btn-outline" style="width:auto; margin-top:0; padding:4px 8px; font-size:10px;" onclick="selectedNode=null; renderPanel(); drawMap();">✖ Fechar</button>
+      </div>
+      <p style="margin-top:8px;">${n.desc}</p>
     </div>
 
     <div class="card">
-      <h3>Métricas Atuais</h3>
-      <div class="stat-row">
-        <span class="label">Status</span>
-        <span class="badge ${badgeClass}">${statusText}</span>
-      </div>
-      <div class="stat-row">
-        <span class="label">Cota Atual / Máxima</span>
-        <span class="val">${n.cota.toFixed(2)}m / ${n.max}m</span>
-      </div>
-      <div class="bar"><div class="bar-fill" style="width:${Math.min(100, pct)}%; background:${nodeColor(n)};"></div></div>
+      <h3>Nível Atual e Alerta</h3>
       <div class="stat-row" style="margin-top:10px;">
-        <span class="label">Vazão Estimada</span>
-        <span class="val">${n.vazao} m³/s</span>
+        <span class="label">Cota Atual</span>
+        <span class="val" style="color:${nodeColor(n)};">${n.cota.toFixed(2)}m</span>
       </div>
+      <div class="stat-row">
+        <span class="label">Cota Máxima Histórica</span>
+        <span class="val">${n.max}m</span>
+      </div>
+      <div class="bar" style="margin-top:10px;"><div class="bar-fill" style="width:${Math.min(100,pct)}%; background:${nodeColor(n)};"></div></div>
     </div>
 
     <div class="card">
-      <h3>Histórico Recente</h3>
-      <canvas class="spark" id="sparkCanvas"></canvas>
+      <h3>Histórico de Cota (Sessão)</h3>
+      <canvas class="spark" id="sparkCanvas" width="300" height="60" style="margin-top:8px;"></canvas>
     </div>
 
     <div class="card">
-      <h3>Ações Rápidas</h3>
-      <button class="btn btn-outline" id="btnClearSelection">← Voltar à Visão Geral</button>
+      <h3>Configurar Alertas Personalizados</h3>
+      <label class="field">WhatsApp para Notificações</label>
+      <input type="text" id="cfgPhone" value="${localStorage.getItem('user_whatsapp_phone')||'51984997716'}" placeholder="51984997716">
+      
+      <label class="field">E-mail para Alertas</label>
+      <input type="email` + `}" id="cfgEmail" value="${localStorage.getItem('user_email')||'sandro@exemplo.com'}" placeholder="sandro@exemplo.com">
+      
+      <button class="btn btn-primary" onclick="salvarConfigContato()">Salvar Preferências</button>
     </div>
   `;
-
-  document.getElementById('btnClearSelection').onclick = () => {
-    selectedNode = null;
-    renderPanel();
-    drawMap();
-  };
-
   drawSparkline(n);
+}
+
+function salvarConfigContato(){
+  const ph = document.getElementById('cfgPhone').value;
+  const em = document.getElementById('cfgEmail').value;
+  localStorage.setItem('user_whatsapp_phone', ph);
+  localStorage.setItem('user_email', em);
+  alert('Preferências de contato salvas com sucesso!');
 }
 
 function drawSparkline(n){
   const sc = document.getElementById('sparkCanvas');
   if(!sc) return;
   const sctx = sc.getContext('2d');
-  const w = sc.width = sc.clientWidth * devicePixelRatio;
-  const h = sc.height = sc.clientHeight * devicePixelRatio;
+  const w = sc.width, h = sc.height;
   sctx.clearRect(0,0,w,h);
 
   const hist = n.history;
   if(hist.length < 2){
-    sctx.fillStyle = '#8aa0c4';
-    sctx.font = '11px sans-serif';
-    sctx.textAlign = 'center';
+    sctx.fillStyle='#8aa0c4'; sctx.font='11px sans-serif'; sctx.textAlign='center';
     sctx.fillText('Aguardando dados...', w/2, h/2);
     return;
   }
 
-  const cotas = hist.map(pt=>pt.cota);
-  const minC = Math.min(...cotas, NODE_BASE[n.id]);
-  const maxC = Math.max(...cotas, n.max*0.8);
-
+  const minC = Math.min(...hist.map(item=>item.cota), 0);
+  const maxC = Math.max(...hist.map(item=>item.cota), n.max);
+  
   sctx.beginPath();
   hist.forEach((pt, i)=>{
-    const x = (i / (hist.length-1)) * w;
-    const y = h - ((pt.cota - minC) / (maxC - minC || 1)) * (h - 16) - 8;
+    const x = (i/(hist.length-1)) * w;
+    const y = h - ((pt.cota - minC)/(maxC - minC || 1)) * (h - 10) - 5;
     if(i===0) sctx.moveTo(x,y); else sctx.lineTo(x,y);
   });
-  sctx.strokeStyle = '#3aa0ff';
-  sctx.lineWidth = 2 * devicePixelRatio;
-  sctx.stroke();
+  sctx.strokeStyle='#3aa0ff'; sctx.lineWidth=2; sctx.stroke();
 }
 
-function renderLiveTab(el){
-  el.innerHTML = `
+function renderLivePanel(p){
+  p.innerHTML = `
     <div class="card">
-      <h3>Monitoramento Oficial (ANA)</h3>
-      <p>Plataforma integrada conectada à Agência Nacional de Águas com credenciais blindadas no backend.</p>
+      <h3>Integração Oficial (ANA & Open-Meteo)</h3>
+      <p style="margin-top:6px;">Conecte-se às estações telemétricas oficiais da Agência Nacional de Águas (ANA) para monitorar cotas reais em tempo real.</p>
       
-      <button class="btn btn-primary" id="btnSyncLive" style="margin-top:14px;">
-        ${liveState.loading ? '🔄 Sincronizando dados da ANA...' : '🛰️ Sincronizar com a ANA Agora'}
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="sincronizarDadosReais()" ${liveState.loading?'disabled':''}>
+        ${liveState.loading?'Sincronizando...':'🛰️ Sincronizar Dados Reais Agora'}
       </button>
     </div>
 
     <div class="card">
-      <h3>Status das Estações Teleguiadas</h3>
-      <div id="liveStationsList"></div>
+      <h3>Status das Estações (Tempo Real)</h3>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+        ${Object.values(NODES).map(n=>{
+          const apiD = liveState.dataApi[n.id];
+          const accum = liveState.accum7d[n.id];
+          return `
+            <div style="background:#0a1120; border:1px solid var(--line); border-radius:6px; padding:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <strong style="font-size:12px;">${n.name}</strong>
+                <span class="badge ${liveState.active?'b-ok':'b-warn'}">${liveState.active?'Online':'Simulado'}</span>
+              </div>
+              <div style="font-size:11px; color:var(--muted); display:flex; justify-content:space-between;">
+                <span>Cota Oficial: <strong>${n.cota.toFixed(2)}m</strong></span>
+                <span>Chuva 7d: <strong>${accum?accum.totalMm.toFixed(1):'--'} mm</strong></span>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
     </div>
   `;
-
-  document.getElementById('btnSyncLive').onclick = () => {
-    sincronizarDadosReais();
-  };
-
-  renderLiveStationsList();
 }
 
-function renderLiveStationsList(){
-  const list = document.getElementById('liveStationsList');
-  if(!list) return;
-  list.innerHTML = '';
-  Object.values(NODES).forEach(n=>{
-    const dados = liveState.dataApi[n.id];
-    const row = document.createElement('div');
-    row.style.marginBottom = '10px';
-    row.style.padding = '8px';
-    row.style.background = '#0a1120';
-    row.style.borderRadius = '6px';
-    row.style.border = '1px solid var(--line)';
-    row.innerHTML = `
-      <div class="stat-row">
-        <span class="label" style="font-weight:600; color:var(--text);">${n.name}</span>
-        <span class="badge ${liveState.active?'b-ok':'b-warn'}">${liveState.active?'Online':'Simulado'}</span>
-      </div>
-      <div class="stat-row" style="font-size:11px; margin-top:4px;">
-        <span class="label">Nível Registrado (ANA)</span>
-        <span class="val">${dados && dados.nivel ? dados.nivel+'m' : n.cota.toFixed(2)+'m'}</span>
-      </div>
-    `;
-    list.appendChild(row);
-  });
-}
-
-// Inicialização Geral
-window.addEventListener('load', () => {
-  resizeCanvas();
-  renderPanel();
-});
+/* Inicialização */
+resizeCanvas();
+renderPanel();
+updateClockUI();
 </script>
 </body>
 </html>
