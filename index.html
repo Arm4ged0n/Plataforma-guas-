@@ -170,7 +170,7 @@
   .btn-danger{background:transparent; border:1px solid var(--danger); color:var(--danger);}
   .btn-danger:hover{background:rgba(255,77,79,.1);}
 
-  .rain-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .rain-grid{display:grid; grid-template-columns:1fr; gap:8px;}
   .rain-item{background:#0a1120; border:1px solid var(--line); border-radius:6px; padding:8px;}
   .rain-item .name{font-size:10px; color:var(--muted); margin-bottom:4px;}
   .rain-item .value{font-size:13px; font-weight:700; color:var(--accent2);}
@@ -260,7 +260,7 @@ const NODES = {
   taquari: {
     id:'taquari', name:'Rio Taquari', sub:'Lajeado, Estrela, Muçum',
     x:0.30, y:0.24, type:'rio', cota:1.85, max:5.0, vazao:250, decay:0.06,
-    isSource:false, rain:0, ibge:'4311403',
+    isSource:true, rain:0, ibge:'4311403',
     desc:'Um dos primeiros rios a colapsar em 2024. Subiu dezenas de metros acima do normal em poucas horas.',
     hist2024:{peak:5.0, peakDay:3, label:'Pico histórico em 01/mai/2024'}
   },
@@ -892,10 +892,31 @@ function renderSimTab(el){
     </div>
 
     <div class="card">
-      <h3>Configuração de Chuva na Serra <span class="src-badge src-sim">Entrada</span></h3>
-      <p>Ajuste o volume de precipitação nas cabeceiras para deflagrar a onda de cheia em cascata.</p>
-      <label class="field">Precipitação — Serra / Noroeste (${NODES.serra.rain} mm/h)</label>
-      <input type="range" min="0" max="150" step="5" value="${NODES.serra.rain}" oninput="NODES.serra.rain=parseFloat(this.value); this.previousElementSibling.textContent='Precipitação — Serra / Noroeste ('+this.value+' mm/h)';">
+      <h3>Configuração de Chuva nas Cabeceiras <span class="src-badge src-sim">Efeito Cascata</span></h3>
+      <p>Ajuste o volume de precipitação em cada bacia de cabeceira para alimentar o fluxo em direção ao Lago Guaíba.</p>
+      
+      <div class="rain-grid" style="margin-top:10px;">
+        <div class="rain-item">
+          <div class="name">Serra / Noroeste</div>
+          <div class="value">${NODES.serra.rain} mm/h</div>
+          <input type="range" min="0" max="150" step="5" value="${NODES.serra.rain}" oninput="NODES.serra.rain=parseFloat(this.value); this.previousElementSibling.previousElementSibling.textContent=this.value+' mm/h';">
+        </div>
+        <div class="rain-item">
+          <div class="name">Rio Taquari</div>
+          <div class="value">${NODES.taquari.rain} mm/h</div>
+          <input type="range" min="0" max="150" step="5" value="${NODES.taquari.rain}" oninput="NODES.taquari.rain=parseFloat(this.value); this.previousElementSibling.previousElementSibling.textContent=this.value+' mm/h';">
+        </div>
+        <div class="rain-item">
+          <div class="name">Rio Jacuí</div>
+          <div class="value">${NODES.jacui.rain} mm/h</div>
+          <input type="range" min="0" max="150" step="5" value="${NODES.jacui.rain}" oninput="NODES.jacui.rain=parseFloat(this.value); this.previousElementSibling.previousElementSibling.textContent=this.value+' mm/h';">
+        </div>
+        <div class="rain-item">
+          <div class="name">Rio dos Sinos</div>
+          <div class="value">${NODES.sinos.rain} mm/h</div>
+          <input type="range" min="0" max="150" step="5" value="${NODES.sinos.rain}" oninput="NODES.sinos.rain=parseFloat(this.value); this.previousElementSibling.previousElementSibling.textContent=this.value+' mm/h';">
+        </div>
+      </div>
     </div>
 
     <div class="card">
