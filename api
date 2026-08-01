@@ -7,22 +7,14 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Método não permitido' });
     }
 
-    const { stationName, cota, max, email } = req.body;
+    const { email, stationName, cota, status, max } = req.body;
 
     try {
         const data = await resend.emails.send({
-            from: 'Plataforma Águas RS <onboarding@resend.dev>',
+            from: 'Plataforma Águas <onboarding@resend.dev>',
             to: [email || 'sandrofagun@gmail.com'],
-            subject: `⚠️ ALERTA CRÍTICO: ${stationName} atingiu ${cota}m`,
-            html: `
-                <h2>Alerta Hidrológico - Plataforma Interativa</h2>
-                <p>O monitoramento registrou uma situação crítica no nó <b>${stationName}</b>.</p>
-                <ul>
-                    <li><b>Cota Atual:</b> ${cota}m</li>
-                    <li><b>Limite Máximo:</b> ${max}m</li>
-                </ul>
-                <p>Acesse a plataforma para mais detalhes.</p>
-            `
+            subject: `⚠️ Alerta na Estação: ${stationName}`,
+            html: `<h3>Alerta Crítico</h3><p>A estação <b>${stationName}</b> atingiu a cota ${cota}.</p>`
         });
         return res.status(200).json({ success: true, data });
     } catch (error) {
