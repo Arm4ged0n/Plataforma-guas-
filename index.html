@@ -150,7 +150,7 @@
 
   label.field{display:block; font-size:11px; color:var(--muted); margin-bottom:4px; margin-top:10px;}
   input[type=range]{width:100%; accent-color:var(--accent);}
-  input[type=number], input[type=text]{
+  input[type=number], input[type=text], input[type=email]{
     width:100%; background:#0a1120; border:1px solid var(--line); color:var(--text);
     padding:6px 8px; border-radius:6px; font-size:12px;
   }
@@ -247,11 +247,12 @@
 
 <script>
 /* =========================================================
-   MODELO DE DADOS
+   MODELO DE DADOS & COORDENADAS GEOGRÁFICAS REAIS (RS)
 ========================================================= */
 const NODES = {
   serra: {
     id:'serra', name:'Serra / Noroeste', sub:'Cotiporã, Bento Gonçalves, Muçum',
+    lat: -28.7183, lon: -51.5284,
     x:0.16, y:0.10, type:'cabeceira', cota:1.2, max:3.0, vazao:80, decay:0.08,
     isSource:true, rain:0, ibge:'4302105',
     desc:'Cabeceiras de relevo acidentado. Chuvas intensas aqui geram deslizamentos e enxurradas que descem rapidamente para os vales.',
@@ -259,6 +260,7 @@ const NODES = {
   },
   taquari: {
     id:'taquari', name:'Rio Taquari', sub:'Lajeado, Estrela, Muçum',
+    lat: -29.4672, lon: -51.9644,
     x:0.30, y:0.24, type:'rio', cota:1.85, max:5.0, vazao:250, decay:0.06,
     isSource:false, rain:0, ibge:'4311403',
     desc:'Um dos primeiros rios a colapsar em 2024. Subiu dezenas de metros acima do normal em poucas horas.',
@@ -266,6 +268,7 @@ const NODES = {
   },
   jacui: {
     id:'jacui', name:'Rio Jacuí', sub:'Depressão Central',
+    lat: -29.9823, lon: -51.8105,
     x:0.44, y:0.36, type:'rio', cota:1.65, max:4.5, vazao:180, decay:0.06,
     isSource:true, rain:0, ibge:'4322400',
     desc:'Drena grande parte do centro e oeste do estado para a região metropolitana.',
@@ -273,6 +276,7 @@ const NODES = {
   },
   sinos: {
     id:'sinos', name:'Rio dos Sinos', sub:'São Leopoldo, Novo Hamburgo, Canoas',
+    lat: -29.7592, lon: -51.1492,
     x:0.58, y:0.40, type:'rio', cota:1.2, max:4.0, vazao:120, decay:0.06,
     isSource:true, rain:0, ibge:'4318705',
     desc:'Deságua na Região Metropolitana, provocando inundações históricas em Canoas e São Leopoldo.',
@@ -280,6 +284,7 @@ const NODES = {
   },
   guaiba: {
     id:'guaiba', name:'Lago Guaíba', sub:'Porto Alegre',
+    lat: -30.0346, lon: -51.2177,
     x:0.50, y:0.53, type:'lago', cota:2.5, max:4.77, vazao:420, decay:0.015,
     isSource:false, rain:0, ibge:'4314902',
     desc:'Funil que recebe toda a água dos rios principais. Atingiu 4,77m em 03/mai/2024.',
@@ -287,6 +292,7 @@ const NODES = {
   },
   lagoa: {
     id:'lagoa', name:'Lagoa dos Patos', sub:'Pelotas, Rio Grande, São José do Norte',
+    lat: -31.7719, lon: -52.3428,
     x:0.54, y:0.72, type:'lagoa', cota:0.95, max:2.5, vazao:420, decay:0.004,
     isSource:false, rain:0, ibge:'4314407',
     desc:'Gigantesco estuário que recebe o volume represado na região metropolitana.',
@@ -294,6 +300,7 @@ const NODES = {
   },
   oceano: {
     id:'oceano', name:'Barra / Oceano Atlântico', sub:'Rio Grande – Cassino',
+    lat: -32.0368, lon: -52.0986,
     x:0.52, y:0.90, type:'oceano', cota:0.4, max:1.2, vazao:420, decay:0.004,
     isSource:false, rain:0, ibge:'4315602',
     desc:'Ponto de escoamento final e gargalo hidráulico oceânico.',
@@ -315,7 +322,7 @@ Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
 Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; });
 
 /* =========================================================
-   ESTADO DA API E DADOS REAIS (SEGURO VIA BACKEND / VERCEL ENV)
+   ESTADO DA API E DADOS REAIS
 ========================================================= */
 let liveState = {
   active: false,
@@ -702,7 +709,7 @@ canvas.addEventListener('touchend', e=>{
 }, {passive:true});
 
 /* =========================================================
-   SIMULAÇÃO EM CASCATA & ALERTAS WHATSAPP
+   SIMULAÇÃO EM CASCATA & NOTIFICAÇÕES (WHATSAPP E E-MAIL)
 ========================================================= */
 let particles = [];
 let simRunning=false;
@@ -730,12 +737,36 @@ async function enviarAlertaWhatsApp(n, statusText) {
         stationName: n.name,
         cota: n.cota.toFixed(2),
         status: statusText,
-        max: n.max
+        max: n.max,
+        lat: n.lat,
+        lon: n.lon
       })
     });
     logEvent(`Mensagem de WhatsApp enviada para (${userPhone}) referente a ${n.name}`, 'alert');
   } catch (e) {
     logEvent(`Falha ao disparar WhatsApp para ${n.name}`, 'critical');
+  }
+}
+
+async function enviarAlertaEmail(n, statusText) {
+  const userEmail = localStorage.getItem('user_email') || 'sandro@exemplo.com';
+  try {
+    await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: userEmail,
+        stationName: n.name,
+        cota: n.cota.toFixed(2),
+        status: statusText,
+        max: n.max,
+        lat: n.lat,
+        lon: n.lon
+      })
+    });
+    logEvent(`E-mail de alerta enviado para (${userEmail}) referente a ${n.name}`, 'alert');
+  } catch (e) {
+    logEvent(`Falha ao disparar E-mail para ${n.name}`, 'critical');
   }
 }
 
@@ -829,10 +860,12 @@ function checkAlert(n){
     notified[n.id+'_critico'] = true;
     logEvent(`CRÍTICO: ${n.name} ultrapassou 100% da cota (${n.cota.toFixed(2)}m)!`, 'critical');
     enviarAlertaWhatsApp(n, 'CRÍTICO (>100%)');
+    enviarAlertaEmail(n, 'CRÍTICO (>100%)');
   } else if(pct >= 0.6 && pct < 1.0 && !notified[n.id+'_alerta']){
     notified[n.id+'_alerta'] = true;
     logEvent(`ALERTA: ${n.name} entrou em faixa de atenção (${n.cota.toFixed(2)}m).`, 'alert');
     enviarAlertaWhatsApp(n, 'ALERTA (>=60%)');
+    enviarAlertaEmail(n, 'ALERTA (>=60%)');
   }
 }
 
@@ -878,10 +911,12 @@ function renderSimTab(el){
     </div>
 
     <div class="card">
-      <h3>Cadastro de WhatsApp (Alertas)</h3>
-      <label class="field">Seu Número (com DDD)</label>
+      <h3>Configuração de Alertas (WhatsApp & E-mail)</h3>
+      <label class="field">Seu Número WhatsApp (com DDD)</label>
       <input type="text" id="whatsappInput" value="${localStorage.getItem('user_whatsapp_phone') || '51984997716'}" placeholder="Ex: 51984997716">
-      <button class="btn btn-outline" id="btnSavePhone" style="margin-top:6px;">Salvar Número</button>
+      <label class="field">Seu E-mail para Alertas</label>
+      <input type="email" id="emailInput" value="${localStorage.getItem('user_email') || 'sandro@exemplo.com'}" placeholder="Ex: seu-email@dominio.com">
+      <button class="btn btn-outline" id="btnSaveConfig" style="margin-top:8px;">Salvar Configurações</button>
     </div>
 
     <div class="card">
@@ -910,10 +945,12 @@ function renderSimTab(el){
     const label = e.target.previousElementSibling;
     if(label) label.textContent = `Velocidade (${simSpeed}h / seg)`;
   };
-  document.getElementById('btnSavePhone').onclick = () => {
-    const val = document.getElementById('whatsappInput').value.trim();
-    localStorage.setItem('user_whatsapp_phone', val);
-    logEvent(`Número de WhatsApp atualizado para: ${val}`, 'info');
+  document.getElementById('btnSaveConfig').onclick = () => {
+    const valPhone = document.getElementById('whatsappInput').value.trim();
+    const valEmail = document.getElementById('emailInput').value.trim();
+    localStorage.setItem('user_whatsapp_phone', valPhone);
+    localStorage.setItem('user_email', valEmail);
+    logEvent(`Configurações de contato atualizadas (WhatsApp e E-mail).`, 'info');
   };
 
   renderRainGrid();
@@ -1090,6 +1127,7 @@ function renderExploreTab(el){
       <div class="node-title">${n.name}</div>
       <div class="node-sub">${n.sub} • Código IBGE: ${n.ibge}</div>
       <p>${n.desc}</p>
+      <div style="font-size:10.5px; color:var(--accent); margin-top:6px;">📍 Lat: ${n.lat}, Lon: ${n.lon}</div>
     </div>
 
     <div class="card">
