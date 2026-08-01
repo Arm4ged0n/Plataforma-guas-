@@ -1,5 +1,6 @@
+
 {
-  "dependencies": {
-    "resend": "^4.0.0"
-  }
+  "name": "plataforma-aguas-rs",
+  "version": "1.0.0",
+  "private": true
 }
