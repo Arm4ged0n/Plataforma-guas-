@@ -818,7 +818,7 @@ async function enviarAlertaWhatsApp(n, statusText) {
 }
 
 async function enviarAlertaEmail(n, statusText) {
-  const userEmail = localStorage.getItem('user_email') || 'sandro@exemplo.com';
+  const userEmail = localStorage.getItem('user_email') || 'sandrofagun@gmail.com';
   try {
     await fetch('/api/send-email', {
       method: 'POST',
