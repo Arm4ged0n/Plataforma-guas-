@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
   try {
     const resp = await fetch(
-      `https://clima.rs.gov.br/climars/api/v1/ana/cotas/municipio/${IBGE_POA}?limite=1`,
+      `https://clima.rs.gov.br/climars/api/v1/ana/cotas/municipio/${IBGE_POA}?limite=10`,
       { headers: { 'Accept': 'application/json' } }
     );
 
