@@ -1,0 +1,33 @@
+// api/send-email.js
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Método não permitido' });
+  }
+
+  const { nodeName, cota, max, email } = req.body;
+
+  try {
+    const data = await resend.emails.send({
+      from: 'Plataforma Águas RS <onboarding@resend.dev>',
+      to: [email || 'sandrofagun@gmail.com'],
+      subject: `⚠️ ALERTA CRÍTICO: ${nodeName} atingiu ${cota}m`,
+      html: `
+        <h2>Alerta Hidrológico - Plataforma Interativa</h2>
+        <p>O monitoramento registrou uma situação crítica no nó <b>${nodeName}</b>.</p>
+        <ul>
+          <li><b>Cota Atual:</b> ${cota}m</li>
+          <li><b>Limite Máximo:</b> ${max}m</li>
+        </ul>
+        <p>Acesse a plataforma para mais detalhes.</p>
+      `
+    });
+
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
