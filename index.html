@@ -307,7 +307,59 @@ let liveState = {
   lastFetch: null,
   dataApi: {},      // {nodeId: {nivelMetros, status, statusColor, taxaMudanca, ...}}
   accum7d: {},
+  rainNow: {},       // {nodeId: {mmAgora, mmProxHora}}
 };
+
+// Coordenadas aproximadas de cada nó, usadas só pra consultar chuva atual
+// (Open-Meteo — grátis, sem chave, CORS liberado, chamado direto do navegador)
+const RAIN_COORDS = {
+  serra:   { lat:-29.17, lon:-51.53 },
+  taquari: { lat:-29.37, lon:-51.96 },
+  jacui:   { lat:-29.93, lon:-51.72 }, // Triunfo, onde fica a estação real
+  sinos:   { lat:-29.76, lon:-51.15 }, // São Leopoldo
+  guaiba:  { lat:-30.03, lon:-51.23 }, // Porto Alegre / Cais Mauá
+  lagoa:   { lat:-31.77, lon:-52.34 }, // Pelotas
+  oceano:  { lat:-32.03, lon:-52.10 }, // Rio Grande
+};
+
+// Retorna "yyyy-mm-ddThh" na hora local de Brasília — necessário porque a
+// Open-Meteo devolve os horários em hora local, não UTC.
+function horaLocalSaoPaulo(){
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', hourCycle:'h23'
+  });
+  const partes = {};
+  fmt.formatToParts(new Date()).forEach(p=>{ partes[p.type]=p.value; });
+  return `${partes.year}-${partes.month}-${partes.day}T${partes.hour}`;
+}
+
+async function fetchChuvaRealTodosNos(){
+  const ids = Object.keys(RAIN_COORDS);
+  const lats = ids.map(id=>RAIN_COORDS[id].lat).join(',');
+  const lons = ids.map(id=>RAIN_COORDS[id].lon).join(',');
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=precipitation&forecast_days=2&timezone=America%2FSao_Paulo`;
+
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error('Open-Meteo respondeu '+resp.status);
+  const json = await resp.json();
+  const results = Array.isArray(json) ? json : [json];
+  const horaAtual = horaLocalSaoPaulo();
+
+  results.forEach((r, idx)=>{
+    const id = ids[idx];
+    if(!r || !r.hourly) return;
+    let i = r.hourly.time.findIndex(t => t.startsWith(horaAtual));
+    if(i === -1){
+      i = r.hourly.time.reduce((melhor, t, k)=>
+        Math.abs(t.localeCompare(horaAtual)) < Math.abs(r.hourly.time[melhor].localeCompare(horaAtual)) ? k : melhor, 0);
+    }
+    liveState.rainNow[id] = {
+      mmAgora: r.hourly.precipitation[i] ?? 0,
+      mmProxHora: r.hourly.precipitation[i+1] ?? 0,
+    };
+  });
+}
 
 // E-mail de destino do alerta — só existe na sessão do navegador de quem
 // configurou. Nunca fica salvo hardcoded no código-fonte.
@@ -355,6 +407,8 @@ async function sincronizarDadosReais(){
   liveState.error = null;
   if(activeTab==='live') renderPanel();
 
+  if(!simRunning) startSim(); // liga o relógio que grava histórico — sem isso o gráfico nunca enche
+
   try {
     const dados = await consultarCotaReal();
     liveState.dataApi = dados.estacoes;
@@ -385,6 +439,20 @@ async function sincronizarDadosReais(){
       });
     }
   } catch(e){ /* chuva é complementar — falha aqui não derruba o resto */ }
+
+  try {
+    await fetchChuvaRealTodosNos();
+  } catch(e){
+    logEvent('Falha ao buscar chuva atual: '+e.message, 'alert');
+  }
+
+  // Auto-atualiza chuva a cada 10 min enquanto a aba Tempo Real estiver aberta,
+  // sem precisar clicar em Sincronizar de novo
+  if(!liveState.rainInterval){
+    liveState.rainInterval = setInterval(async ()=>{
+      try{ await fetchChuvaRealTodosNos(); }catch(e){ /* tenta de novo no próximo ciclo */ }
+    }, 10*60*1000);
+  }
 
   liveState.loading = false;
   updateLiveBadge();
@@ -517,6 +585,36 @@ function toScreen(nx, ny){
   return { x: px*view.scale + view.offX, y: py*view.scale + view.offY };
 }
 
+// Gotas de chuva animadas caindo sobre o nó — sem guardar estado extra,
+// a posição de cada gota é calculada a partir do relógio (Date.now()),
+// então "cai" sozinha a cada redesenho do mapa (a cada tick, ~10x/seg).
+function drawChuvaEfeito(cx, cy, r){
+  const now = Date.now();
+  const nGotas = 7;
+  const zonaAltura = 46 * view.scale;
+  const zonaLargura = 34 * view.scale;
+
+  for(let i=0; i<nGotas; i++){
+    const seedX = (i * 37) % 100; // 0..99, espalha horizontalmente
+    const seedVel = 0.6 + (i % 3) * 0.25; // velocidades levemente diferentes
+    const ciclo = ((now * seedVel * 0.06) + i * 53) % zonaAltura;
+
+    const dropX = cx + (seedX/100 - 0.5) * zonaLargura;
+    const dropY = cy - r - zonaAltura + ciclo;
+    const comprimento = 7 * view.scale;
+
+    // Gota mais opaca perto do nó (chegando), mais transparente longe (começando a cair)
+    const opacidade = 0.25 + 0.55 * (ciclo/zonaAltura);
+
+    ctx.strokeStyle = `rgba(58,160,255,${opacidade.toFixed(2)})`;
+    ctx.lineWidth = Math.max(1, 1.5*view.scale);
+    ctx.beginPath();
+    ctx.moveTo(dropX, dropY);
+    ctx.lineTo(dropX - 2*view.scale, dropY + comprimento);
+    ctx.stroke();
+  }
+}
+
 function nodeColor(n){
   const oficial = liveState.dataApi[n.id];
   if(oficial && oficial.statusColor) return oficial.statusColor;
@@ -592,6 +690,13 @@ function drawMap(){
     ctx.fillStyle=col; ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=2; ctx.stroke();
 
+    // Chuva real (Open-Meteo) ou manual (slider do simulador) — o que estiver ativo
+    const chuvaReal = liveState.rainNow[n.id];
+    const mmAgora = chuvaReal ? chuvaReal.mmAgora : (n.isSource ? n.rain/10 : 0); // slider é mm/h numa escala maior
+    if(mmAgora > 0.1){
+      drawChuvaEfeito(p.x, p.y, r);
+    }
+
     ctx.fillStyle='#fff';
     ctx.font = `bold ${Math.max(9,10*view.scale)}px sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -608,10 +713,11 @@ function drawMap(){
       ctx.font = `bold ${Math.max(8,9*view.scale)}px sans-serif`;
       ctx.fillText(`🛰️ ${(oficial.status||'').replace('_',' ')}`, p.x, p.y+linhaExtra);
       linhaExtra += 14;
-    } else if(n.isSource && n.rain>0){
+    }
+    if(mmAgora > 0.1){
       ctx.fillStyle='#3aa0ff';
       ctx.font = `bold ${Math.max(9,10*view.scale)}px sans-serif`;
-      ctx.fillText(`☔ chovendo`, p.x, p.y+linhaExtra);
+      ctx.fillText(`☔ chovendo (${mmAgora.toFixed(1)}mm/h)`, p.x, p.y+linhaExtra);
       linhaExtra += 14;
     }
 
@@ -847,6 +953,10 @@ function tick(){
   drawMap();
   updateClockUI();
   if(activeTab==='sim') renderStatusList();
+  if(activeTab==='live' && (!tick.lastLiveRedraw || now - tick.lastLiveRedraw > 5000)){
+    Object.values(NODES).forEach(n => drawMiniTrend(n));
+    tick.lastLiveRedraw = now;
+  }
 }
 
 function checkAlert(n){
