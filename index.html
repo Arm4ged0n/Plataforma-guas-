@@ -954,7 +954,7 @@ function tick(){
   updateClockUI();
   if(activeTab==='sim') renderStatusList();
   if(activeTab==='live' && (!tick.lastLiveRedraw || now - tick.lastLiveRedraw > 5000)){
-    Object.values(NODES).forEach(n => drawMiniTrend(n));
+    Object.values(NODES).forEach(n => desenharGraficoTendencia(n, 'trend-'+n.id));
     tick.lastLiveRedraw = now;
   }
 }
@@ -1243,35 +1243,7 @@ function renderExploreTab(el){
 }
 
 function drawSparkline(n){
-  const sc = document.getElementById('sparkCanvas');
-  if(!sc) return;
-  const sctx = sc.getContext('2d');
-  const w = sc.width = sc.clientWidth * devicePixelRatio;
-  const h = sc.height = sc.clientHeight * devicePixelRatio;
-  sctx.clearRect(0,0,w,h);
-
-  const hist = n.history;
-  if(hist.length < 2){
-    sctx.fillStyle = '#8aa0c4';
-    sctx.font = '11px sans-serif';
-    sctx.textAlign = 'center';
-    sctx.fillText('Aguardando dados...', w/2, h/2);
-    return;
-  }
-
-  const cotas = hist.map(pt=>pt.cota);
-  const minC = Math.min(...cotas, NODE_BASE[n.id]);
-  const maxC = Math.max(...cotas, n.max*0.8);
-
-  sctx.beginPath();
-  hist.forEach((pt, i)=>{
-    const x = (i / (hist.length-1)) * w;
-    const y = h - ((pt.cota - minC) / (maxC - minC || 1)) * (h - 16) - 8;
-    if(i===0) sctx.moveTo(x,y); else sctx.lineTo(x,y);
-  });
-  sctx.strokeStyle = '#3aa0ff';
-  sctx.lineWidth = 2 * devicePixelRatio;
-  sctx.stroke();
+  desenharGraficoTendencia(n, 'sparkCanvas');
 }
 
 /* =========================================================
@@ -1353,14 +1325,14 @@ function renderLiveStationsList(){
   });
 
   // Desenha o gráfico de cada card depois que os canvas já existem no DOM
-  Object.values(NODES).forEach(n => drawMiniTrend(n));
+  Object.values(NODES).forEach(n => desenharGraficoTendencia(n, 'trend-'+n.id));
 }
 
 // Gráfico compacto de tendência: histórico real (linha sólida) + projeção
 // até o próximo limiar (linha pontilhada), igual ao da aba Explorar, só
 // que direto no card, pra não precisar clicar em nada pra ver.
-function drawMiniTrend(n){
-  const c = document.getElementById('trend-'+n.id);
+function desenharGraficoTendencia(n, canvasId){
+  const c = document.getElementById(canvasId);
   if(!c) return;
   c.width = c.clientWidth * devicePixelRatio;
   c.height = c.clientHeight * devicePixelRatio;
