@@ -292,6 +292,18 @@ const EDGES = [
 ];
 
 const NODE_BASE = {};
+
+// Cota de inundação OFICIAL de cada estação real, segundo boletins da Defesa
+// Civil RS e ANA/SGB (não é a mesma coisa que o "max" ilustrativo que usamos
+// no modo simulação — aqui é o valor real publicado, em metros, específico
+// da régua de cada estação, pois o "zero" de cada régua fica numa altura
+// diferente). Confirmado via reportagens datadas de jul-ago/2026.
+const COTA_INUNDACAO_OFICIAL = {
+  guaiba:  3.00,  // Cais Mauá C6
+  jacui:   4.67,  // Triunfo
+  sinos:   4.50,  // São Leopoldo
+  taquari: 19.00, // Estrela
+};
 Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
 Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; });
 
@@ -613,6 +625,41 @@ function drawChuvaEfeito(cx, cy, r){
     ctx.lineTo(dropX - 2*view.scale, dropY + comprimento);
     ctx.stroke();
   }
+}
+
+// Gera o HTML de um medidor horizontal comparando o nível atual com a cota
+// de inundação oficial da estação (quando existe referência confirmada).
+function medidorCotaOficial(n){
+  const cotaOficial = COTA_INUNDACAO_OFICIAL[n.id];
+  if(cotaOficial == null) return '';
+
+  const pct = (n.cota / cotaOficial) * 100;
+  const pctBarra = Math.min(100, pct);
+  const acimaOuAbaixo = n.cota >= cotaOficial
+    ? `${(n.cota-cotaOficial).toFixed(2)}m ACIMA da cota de inundação`
+    : `${(cotaOficial-n.cota).toFixed(2)}m abaixo da cota de inundação`;
+  const cor = pct>=100 ? '#e20228' : pct>=85 ? '#ff8c00' : pct>=60 ? '#ffb020' : '#69a82f';
+
+  return `
+    <div style="margin-top:10px;">
+      <div class="stat-row" style="margin-bottom:4px;">
+        <span class="label" style="font-weight:600;">📏 Cota de Inundação Oficial</span>
+        <span class="val" style="font-size:13px;">${cotaOficial.toFixed(2)}m</span>
+      </div>
+      <div style="position:relative; height:22px; background:#0a1120; border-radius:5px; overflow:hidden; border:1px solid var(--line);">
+        <div style="position:absolute; left:0; top:0; height:100%; width:${pctBarra}%; background:${cor}; transition:width .3s;"></div>
+        <div style="position:absolute; left:100%; top:-2px; bottom:-2px; width:2px; background:#fff;"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:3px; font-size:9.5px; color:var(--muted);">
+        <span>0m</span>
+        <span style="color:${cor}; font-weight:700;">${pct.toFixed(0)}% da cota</span>
+        <span>${cotaOficial.toFixed(1)}m (inundação)</span>
+      </div>
+      <p style="margin-top:5px; font-size:11px; color:${pct>=100?'#ff4d4f':'var(--muted)'}; font-weight:${pct>=100?'700':'400'};">
+        ${pct>=100?'🔴':'📍'} ${acimaOuAbaixo}
+      </p>
+    </div>
+  `;
 }
 
 function nodeColor(n){
@@ -1218,6 +1265,7 @@ function renderExploreTab(el){
       <div class="stat-row"><span class="label">Nível medido</span><span class="val">${oficial.nivelMetros}m</span></div>
       <div class="stat-row"><span class="label">Tendência</span><span class="val" style="font-size:12px;">${oficial.taxaMudanca||'—'}</span></div>
       <div class="stat-row"><span class="label">Medido em</span><span class="val" style="font-size:11px;">${oficial.dataHoraMedicao ? new Date(oficial.dataHoraMedicao).toLocaleString('pt-BR') : '—'}</span></div>
+      ${medidorCotaOficial(n)}
     </div>` : ''}
 
     <div class="card">
@@ -1330,6 +1378,7 @@ function renderLiveStationsList(){
       </div>
       ${dados ? `<div class="stat-row" style="font-size:11px;"><span class="label">Status oficial</span><span class="val">${dados.status.replace('_',' ')}</span></div>` : ''}
       ${dados && dados.taxaMudanca ? `<div class="stat-row" style="font-size:11px;"><span class="label">Tendência</span><span class="val" style="font-size:11px;">${dados.taxaMudanca}</span></div>` : ''}
+      ${medidorCotaOficial(n)}
       <canvas class="spark" id="trend-${n.id}" style="margin-top:8px; height:70px;"></canvas>
     `;
     list.appendChild(row);
