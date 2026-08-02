@@ -1262,6 +1262,17 @@ function renderLiveTab(el){
     </div>
 
     <div class="card">
+      <h3>🌧️ Radar Meteorológico Ao Vivo</h3>
+      <p>Radar oficial da Defesa Civil RS, instalado em Porto Alegre — cobre 150km de raio, atualizado a cada 5 minutos. Azul/verde = chuva fraca, amarelo/laranja = moderada, vermelho/rosa = intensa, roxo/preto = muito intensa.</p>
+      <div style="margin-top:10px; border-radius:8px; overflow:hidden; border:1px solid var(--line);">
+        <iframe src="https://radar-poa-13561874921.us-east1.run.app"
+                style="width:100%; height:320px; border:0; display:block; background:#000;"
+                loading="lazy" title="Radar meteorológico Defesa Civil RS"></iframe>
+      </div>
+      <p style="margin-top:6px; font-size:10.5px;">Fonte: Defesa Civil do Rio Grande do Sul</p>
+    </div>
+
+    <div class="card">
       <h3>📧 Receber Alertas por E-mail</h3>
       <p style="color:var(--accent2);">⚠️ Enquanto esta aba estiver ligada aqui no seu navegador, você recebe e-mail quando algum rio cruzar o limiar de alerta/crítico. Se você fechar essa aba, os alertas param — isso ainda não roda sozinho no servidor.</p>
       <label class="field">Seu e-mail (sandbox Resend: use o mesmo e-mail da conta Resend)</label>
