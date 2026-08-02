@@ -1221,14 +1221,14 @@ function renderLiveStationsList(){
   Object.values(NODES).forEach(n=>{
     const dados = liveState.dataApi[n.id];
     const row = document.createElement('div');
-    row.style.marginBottom = '10px';
-    row.style.padding = '8px';
+    row.style.marginBottom = '12px';
+    row.style.padding = '10px';
     row.style.background = '#0a1120';
     row.style.borderRadius = '6px';
     row.style.border = '1px solid var(--line)';
     row.innerHTML = `
       <div class="stat-row">
-        <span class="label" style="font-weight:600; color:var(--text);">${n.name}</span>
+        <span class="label" style="font-weight:600; color:var(--text); font-size:13px;">${n.name}</span>
         <span class="badge ${dados?'b-ok':'b-warn'}">${dados?'🛰️ Real':'🎲 Simulado'}</span>
       </div>
       <div class="stat-row" style="font-size:11px; margin-top:4px;">
@@ -1236,9 +1236,81 @@ function renderLiveStationsList(){
         <span class="val">${dados ? dados.nivelMetros+'m' : n.cota.toFixed(2)+'m (estimado)'}</span>
       </div>
       ${dados ? `<div class="stat-row" style="font-size:11px;"><span class="label">Status oficial</span><span class="val">${dados.status.replace('_',' ')}</span></div>` : ''}
+      ${dados && dados.taxaMudanca ? `<div class="stat-row" style="font-size:11px;"><span class="label">Tendência</span><span class="val" style="font-size:11px;">${dados.taxaMudanca}</span></div>` : ''}
+      <canvas class="spark" id="trend-${n.id}" style="margin-top:8px; height:70px;"></canvas>
     `;
     list.appendChild(row);
   });
+
+  // Desenha o gráfico de cada card depois que os canvas já existem no DOM
+  Object.values(NODES).forEach(n => drawMiniTrend(n));
+}
+
+// Gráfico compacto de tendência: histórico real (linha sólida) + projeção
+// até o próximo limiar (linha pontilhada), igual ao da aba Explorar, só
+// que direto no card, pra não precisar clicar em nada pra ver.
+function drawMiniTrend(n){
+  const c = document.getElementById('trend-'+n.id);
+  if(!c) return;
+  c.width = c.clientWidth * devicePixelRatio;
+  c.height = c.clientHeight * devicePixelRatio;
+  const sctx = c.getContext('2d');
+  sctx.clearRect(0,0,c.width,c.height);
+
+  const hist = n.history;
+  if(hist.length < 2){
+    sctx.fillStyle = '#8aa0c4';
+    sctx.font = `${11*devicePixelRatio}px sans-serif`;
+    sctx.textAlign = 'center';
+    sctx.fillText('Coletando histórico...', c.width/2, c.height/2);
+    return;
+  }
+
+  const oficial = liveState.dataApi[n.id];
+  const alvoAlerta = n.max*0.6, alvoCritico = n.max*1.0;
+  const alvo = n.cota < alvoAlerta ? alvoAlerta : alvoCritico;
+  const slope = calcularTendencia(n);
+
+  const t0 = hist[0].t;
+  const pontos = hist.map(p=>({ x:(p.t-t0)/3600000, y:p.cota, proj:false }));
+  if(slope!==null && slope>0.001 && n.cota < alvo){
+    const horasProjetadas = Math.min((alvo-n.cota)/slope, 48);
+    pontos.push({ x: pontos[pontos.length-1].x + horasProjetadas, y: alvo, proj:true });
+  }
+
+  const xs = pontos.map(p=>p.x), ys = pontos.map(p=>p.y);
+  const minX=Math.min(...xs), maxX=Math.max(...xs)||1;
+  const minY=Math.min(...ys, n.max*0.3), maxY=Math.max(...ys, alvo)*1.05;
+  const toPx = (x,y) => ({
+    px: ((x-minX)/(maxX-minX||1)) * c.width,
+    py: c.height - ((y-minY)/(maxY-minY||1)) * c.height
+  });
+
+  // Linha de limiar
+  const limiarPx = toPx(minX, alvo).py;
+  sctx.strokeStyle = alvo===n.max ? 'rgba(255,77,79,.5)' : 'rgba(255,176,32,.5)';
+  sctx.setLineDash([3,3]);
+  sctx.beginPath(); sctx.moveTo(0, limiarPx); sctx.lineTo(c.width, limiarPx); sctx.stroke();
+  sctx.setLineDash([]);
+
+  // Histórico real
+  const reais = pontos.filter(p=>!p.proj);
+  sctx.strokeStyle = oficial ? '#2ecc71' : '#3aa0ff';
+  sctx.lineWidth = 2*devicePixelRatio;
+  sctx.beginPath();
+  reais.forEach((p,i)=>{ const {px,py}=toPx(p.x,p.y); i===0?sctx.moveTo(px,py):sctx.lineTo(px,py); });
+  sctx.stroke();
+
+  // Projeção futura
+  if(pontos.length > reais.length){
+    const ultimo = reais[reais.length-1], proj = pontos[pontos.length-1];
+    const a = toPx(ultimo.x, ultimo.y), b = toPx(proj.x, proj.y);
+    sctx.strokeStyle = alvo===n.max ? '#ff4d4f' : '#ffb020';
+    sctx.lineWidth = 2*devicePixelRatio;
+    sctx.setLineDash([5,4]);
+    sctx.beginPath(); sctx.moveTo(a.px,a.py); sctx.lineTo(b.px,b.py); sctx.stroke();
+    sctx.setLineDash([]);
+  }
 }
 
 window.addEventListener('load', () => {
