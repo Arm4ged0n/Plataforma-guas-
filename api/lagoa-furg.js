@@ -12,11 +12,15 @@ const BASE = 'https://api-medidas-porto-7bni.onrender.com/dados';
 const SENSORES = ['sensor_1', 'sensor_2', 'sensor_3', 'sensor_4', 'sensor_5', 'sensor_6'];
 
 function extrairValorCm(raw) {
-  // Tenta várias formas possíveis de vir o dado
+  // Formato confirmado por teste real: {"dado":{"valor":77.5,"data_hora":"...","sensor_id":"..."}}
+  if (raw && typeof raw === 'object' && raw.dado && raw.dado.valor != null) {
+    return parseFloat(raw.dado.valor);
+  }
+  // Formatos alternativos, por segurança
   if (typeof raw === 'number') return raw;
   if (typeof raw === 'string' && !isNaN(parseFloat(raw))) return parseFloat(raw);
   if (raw && typeof raw === 'object') {
-    const candidatos = ['cota', 'value', 'valor', 'nivel', 'medida', 'cm', 'data'];
+    const candidatos = ['cota', 'value', 'valor', 'nivel', 'medida', 'cm'];
     for (const campo of candidatos) {
       if (raw[campo] != null && !isNaN(parseFloat(raw[campo]))) {
         return parseFloat(raw[campo]);
@@ -35,14 +39,28 @@ async function buscarSensor(nome) {
   try { json = JSON.parse(texto); } catch (e) { /* pode não ser JSON, tudo bem */ }
 
   const valorCm = extrairValorCm(json ?? texto);
+  const dataHora = json?.dado?.data_hora || null;
 
   return {
     sensor: nome,
     valorCm,
     valorMetros: valorCm != null ? valorCm / 100 : null,
-    bruto: json ?? texto, // mantemos o dado cru pra depurar se o parsing falhar
+    dataHoraMedicao: dataHora,
+    bruto: json ?? texto,
   };
 }
+
+// Mapeamento sensor_id -> nome da estação. MELHOR PALPITE baseado na
+// proximidade dos valores vistos no site público (78.6/116.9/111.2cm) com
+// o que a API devolveu (77.5/117/118cm) — ainda precisa de confirmação.
+const NOME_ESTACAO = {
+  sensor_1: 'FURG CCMar (Rio Grande)',
+  sensor_2: 'São Lourenço do Sul',
+  sensor_3: 'Arambaré',
+  sensor_4: 'Sensor 4 (nome não confirmado)',
+  sensor_5: 'Sensor 5 (nome não confirmado)',
+  sensor_6: 'Sensor 6 (nome não confirmado)',
+};
 
 export default async function handler(req, res) {
   const resultados = await Promise.allSettled(SENSORES.map(buscarSensor));
@@ -52,7 +70,7 @@ export default async function handler(req, res) {
 
   resultados.forEach((r, i) => {
     if (r.status === 'fulfilled') {
-      sensores[SENSORES[i]] = r.value;
+      sensores[SENSORES[i]] = { ...r.value, nomeEstacao: NOME_ESTACAO[SENSORES[i]] };
     } else {
       erros.push(`${SENSORES[i]}: ${r.reason.message}`);
     }
@@ -60,11 +78,33 @@ export default async function handler(req, res) {
 
   const algumSucesso = Object.keys(sensores).length > 0;
 
+  // Mapeamento pronto pra plataforma: 'oceano' usa o sensor mais próximo da
+  // barra (Rio Grande), 'lagoa' usa a média dos sensores do corpo da lagoa.
+  let porNode = {};
+  if (sensores.sensor_1?.valorMetros != null) {
+    porNode.oceano = {
+      nivelMetros: sensores.sensor_1.valorMetros,
+      nomeEstacao: sensores.sensor_1.nomeEstacao,
+      dataHoraMedicao: sensores.sensor_1.dataHoraMedicao,
+      fonte: 'CIEX-FURG',
+    };
+  }
+  const doLago = [sensores.sensor_2, sensores.sensor_3].filter(s => s?.valorMetros != null);
+  if (doLago.length) {
+    porNode.lagoa = {
+      nivelMetros: doLago.reduce((s, x) => s + x.valorMetros, 0) / doLago.length,
+      nomeEstacao: doLago.map(s => s.nomeEstacao).join(' + '),
+      dataHoraMedicao: doLago[0].dataHoraMedicao,
+      fonte: 'CIEX-FURG',
+    };
+  }
+
   return res.status(algumSucesso ? 200 : 502).json({
     ok: algumSucesso,
     fonte: 'monitoramentolagoadospatos.com.br (CIEX-FURG)',
     consultadoEm: new Date().toISOString(),
     sensores,
+    porNode,
     erros: erros.length ? erros : undefined,
   });
 }
