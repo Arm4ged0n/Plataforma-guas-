@@ -88,6 +88,18 @@
     max-width:320px; z-index:5;
   }
 
+  .node-tooltip{
+    position:absolute; pointer-events:none; z-index:10; display:none;
+    background:rgba(13,22,38,.97); border:1px solid var(--line); border-radius:8px;
+    padding:12px 14px; max-width:260px; box-shadow:0 6px 20px rgba(0,0,0,.4);
+  }
+  .node-tooltip.show{ display:block; }
+  .node-tooltip .tt-titulo{ font-size:13px; font-weight:700; color:var(--text); margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+  .node-tooltip .tt-status{ font-size:11px; font-weight:700; padding:2px 7px; border-radius:4px; margin-bottom:8px; display:inline-block; }
+  .node-tooltip .tt-label{ font-size:10px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); margin-top:6px; margin-bottom:3px; }
+  .node-tooltip .tt-cidades{ font-size:12px; color:var(--text); line-height:1.5; }
+  .node-tooltip .tt-cidade-risco{ color:#ff8c8c; font-weight:600; }
+
   .legend-float{
     position:absolute; top:14px; left:14px; background:rgba(16,26,46,.9); border:1px solid var(--line);
     border-radius:8px; padding:10px 12px; font-size:11px; z-index:5;
@@ -220,6 +232,8 @@
       </div>
 
       <div class="map-hint">Clique em um nó para inspecionar. Arraste para mover o mapa. Scroll para zoom.</div>
+
+      <div id="nodeTooltip" class="node-tooltip"></div>
     </div>
 
     <aside id="sidePanel"></aside>
@@ -818,6 +832,62 @@ function drawMap(){
   ctx.fillText('↓ Oceano Atlântico', 16, h-16);
 }
 
+function classificarRisco(n){
+  const oficial = liveState.dataApi[n.id];
+  if(oficial){
+    if(oficial.status==='INUNDACAO') return {label:'INUNDAÇÃO', cor:'#e20228', bg:'rgba(226,2,40,.18)', risco:true};
+    if(oficial.status==='ALERTA_INUNDACAO') return {label:'ALERTA DE INUNDAÇÃO', cor:'#ff8c00', bg:'rgba(255,140,0,.18)', risco:true};
+    if(oficial.status==='ATENCAO_INUNDACAO') return {label:'ATENÇÃO', cor:'#ffb020', bg:'rgba(255,176,32,.18)', risco:true};
+    if(oficial.status==='NORMALIDADE') return {label:'NORMAL', cor:'#2ecc71', bg:'rgba(46,204,113,.15)', risco:false};
+    return {label:'DADO REAL (sem classificação)', cor:'#3aa0ff', bg:'rgba(58,160,255,.15)', risco:false};
+  }
+  const pct = n.cota/n.max;
+  if(pct>=1) return {label:'CRÍTICO (simulado)', cor:'#ff4d4f', bg:'rgba(255,77,79,.15)', risco:true};
+  if(pct>=0.6) return {label:'ALERTA (simulado)', cor:'#ffb020', bg:'rgba(255,176,32,.15)', risco:true};
+  return {label:'NORMAL (simulado)', cor:'#2ecc71', bg:'rgba(46,204,113,.15)', risco:false};
+}
+
+function mostrarTooltip(nodeId, mouseX, mouseY){
+  const el = document.getElementById('nodeTooltip');
+  if(!el) return;
+  const n = NODES[nodeId];
+  const risco = classificarRisco(n);
+  const cidades = (n.sub||'').split(',').map(c=>c.trim()).filter(Boolean);
+
+  const cidadesHtml = cidades.length
+    ? cidades.map(c => `<div class="${risco.risco?'tt-cidade-risco':''}">${risco.risco?'⚠️ ':'• '}${c}</div>`).join('')
+    : '<div>—</div>';
+
+  const mensagemRisco = risco.risco
+    ? 'Cidades abaixo podem ser afetadas pelo nível atual deste rio:'
+    : 'Sem risco elevado no momento nestas cidades:';
+
+  el.innerHTML = `
+    <div class="tt-titulo">🌊 ${n.name}</div>
+    <span class="tt-status" style="color:${risco.cor}; background:${risco.bg};">${risco.label}</span>
+    <div class="tt-label">${mensagemRisco}</div>
+    <div class="tt-cidades">${cidadesHtml}</div>
+  `;
+
+  // Posiciona o balão perto do cursor, sem deixar estourar a borda do mapa
+  const areaRect = canvas.parentElement.getBoundingClientRect();
+  let left = mouseX + 16;
+  let top = mouseY + 16;
+  el.classList.add('show');
+  const ttRect = el.getBoundingClientRect();
+  if(left + ttRect.width > areaRect.width) left = mouseX - ttRect.width - 16;
+  if(top + ttRect.height > areaRect.height) top = mouseY - ttRect.height - 16;
+  el.style.left = Math.max(4, left) + 'px';
+  el.style.top = Math.max(4, top) + 'px';
+}
+
+function esconderTooltip(){
+  const el = document.getElementById('nodeTooltip');
+  if(el) el.classList.remove('show');
+}
+
+canvas.addEventListener('mouseleave', esconderTooltip);
+
 function hitTest(mx,my){
   let found=null;
   Object.values(NODES).forEach(n=>{
@@ -850,11 +920,17 @@ window.addEventListener('mousemove', e=>{
     view.offX = dragOff0.x + (e.clientX-dragStart.x)*devicePixelRatio;
     view.offY = dragOff0.y + (e.clientY-dragStart.y)*devicePixelRatio;
     drawMap();
+    esconderTooltip();
   } else {
     const rect=canvas.getBoundingClientRect();
     const mx=(e.clientX-rect.left)*devicePixelRatio, my=(e.clientY-rect.top)*devicePixelRatio;
     const hit = hitTest(mx,my);
     if(hit!==hoverNode){ hoverNode=hit; canvas.style.cursor = hit?'pointer':'grab'; drawMap(); }
+    if(hit){
+      mostrarTooltip(hit, e.clientX - rect.left, e.clientY - rect.top);
+    } else {
+      esconderTooltip();
+    }
   }
 });
 window.addEventListener('mouseup', ()=>{ dragging=false; canvas.classList.remove('dragging'); });
@@ -877,6 +953,7 @@ function pinchDistance(touches){
 }
 
 canvas.addEventListener('touchstart', e=>{
+  esconderTooltip();
   if(e.touches.length===2){ lastPinchDist = pinchDistance(e.touches); return; }
   const t = e.touches[0];
   touchStartPos = {x:t.clientX, y:t.clientY};
