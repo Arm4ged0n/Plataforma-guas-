@@ -442,6 +442,30 @@ async function sincronizarDadosReais(){
   }
 
   try {
+    const respLagoa = await fetch('/api/lagoa-furg');
+    const dadosLagoa = await respLagoa.json();
+    if(dadosLagoa.ok && dadosLagoa.porNode){
+      Object.entries(dadosLagoa.porNode).forEach(([nodeId, est])=>{
+        if(NODES[nodeId] && est.nivelMetros != null){
+          liveState.dataApi[nodeId] = {
+            nivelMetros: est.nivelMetros.toFixed(2),
+            status: 'DADO_CIEX_FURG', // ainda sem classificação oficial de alerta/inundação
+            statusColor: '#3aa0ff',
+            taxaMudanca: null,
+            nomeEstacao: est.nomeEstacao,
+            rio: nodeId==='oceano' ? 'Barra / Oceano Atlântico' : 'Lagoa dos Patos',
+            dataHoraMedicao: est.dataHoraMedicao,
+          };
+          NODES[nodeId].cota = est.nivelMetros;
+        }
+      });
+      logEvent('Dados da Lagoa dos Patos sincronizados (CIEX-FURG).', 'info');
+    }
+  } catch(e){
+    logEvent('Falha ao buscar dados da Lagoa dos Patos: '+e.message, 'alert');
+  }
+
+  try {
     const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&hourly=precipitation&past_days=7&timezone=America%2FSao_Paulo`);
     const json = await resp.json();
     if(json && json.hourly){
