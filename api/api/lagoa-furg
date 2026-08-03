@@ -1,0 +1,71 @@
+// api/lagoa-furg.js
+// Busca os sensores da Rede de Monitoramento do Nível da Lagoa dos Patos
+// (CIEX-FURG), via o mesmo endpoint que o site monitoramentolagoadospatos.com.br
+// usa no navegador — sem senha, público.
+//
+// IMPORTANTE: ainda não confirmamos o formato exato da resposta de cada
+// sensor (pode ser um número puro, ou um JSON tipo {cota: X} / {value: X}).
+// Este proxy tenta os formatos mais prováveis e devolve o dado bruto junto,
+// pra ajustarmos rápido se o parsing não bater com a realidade.
+
+const BASE = 'https://api-medidas-porto-7bni.onrender.com/dados';
+const SENSORES = ['sensor_1', 'sensor_2', 'sensor_3', 'sensor_4', 'sensor_5', 'sensor_6'];
+
+function extrairValorCm(raw) {
+  // Tenta várias formas possíveis de vir o dado
+  if (typeof raw === 'number') return raw;
+  if (typeof raw === 'string' && !isNaN(parseFloat(raw))) return parseFloat(raw);
+  if (raw && typeof raw === 'object') {
+    const candidatos = ['cota', 'value', 'valor', 'nivel', 'medida', 'cm', 'data'];
+    for (const campo of candidatos) {
+      if (raw[campo] != null && !isNaN(parseFloat(raw[campo]))) {
+        return parseFloat(raw[campo]);
+      }
+    }
+  }
+  return null;
+}
+
+async function buscarSensor(nome) {
+  const resp = await fetch(`${BASE}/${nome}`, { headers: { 'Accept': 'application/json, text/plain, */*' } });
+  if (!resp.ok) throw new Error(`${nome}: HTTP ${resp.status}`);
+
+  const texto = await resp.text();
+  let json = null;
+  try { json = JSON.parse(texto); } catch (e) { /* pode não ser JSON, tudo bem */ }
+
+  const valorCm = extrairValorCm(json ?? texto);
+
+  return {
+    sensor: nome,
+    valorCm,
+    valorMetros: valorCm != null ? valorCm / 100 : null,
+    bruto: json ?? texto, // mantemos o dado cru pra depurar se o parsing falhar
+  };
+}
+
+export default async function handler(req, res) {
+  const resultados = await Promise.allSettled(SENSORES.map(buscarSensor));
+
+  const sensores = {};
+  const erros = [];
+
+  resultados.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      sensores[SENSORES[i]] = r.value;
+    } else {
+      erros.push(`${SENSORES[i]}: ${r.reason.message}`);
+    }
+  });
+
+  const algumSucesso = Object.keys(sensores).length > 0;
+
+  return res.status(algumSucesso ? 200 : 502).json({
+    ok: algumSucesso,
+    fonte: 'monitoramentolagoadospatos.com.br (CIEX-FURG)',
+    consultadoEm: new Date().toISOString(),
+    sensores,
+    erros: erros.length ? erros : undefined,
+  });
+}
+u
