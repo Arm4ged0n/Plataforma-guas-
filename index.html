@@ -627,9 +627,11 @@ function resizeCanvas(){
   canvas.height = rect.height * devicePixelRatio;
   canvas.style.width = rect.width+'px';
   canvas.style.height = rect.height+'px';
+  view = {scale:1, offX:0, offY:0}; // sempre volta a mostrar o fluxo inteiro ao redimensionar
   drawMap();
 }
 window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', resizeCanvas);
 
 function toScreen(nx, ny){
   const w = canvas.width, h = canvas.height;
