@@ -198,6 +198,10 @@
 <body>
 <div class="app">
 
+  <div id="copyrightFooter" style="position:fixed; bottom:6px; right:10px; font-size:9.5px; color:rgba(138,160,196,.55); z-index:50; pointer-events:none; user-select:none;">
+    © 2026 Sandro Fagundes — Todos os direitos reservados
+  </div>
+
   <header>
     <div>
       <h1>🌊 Plataforma Interativa — Fluxo de Águas do Rio Grande do Sul</h1>
@@ -246,49 +250,49 @@
 ========================================================= */
 const NODES = {
   serra: {
-    id:'serra', name:'Serra / Noroeste', sub:'Cotiporã, Bento Gonçalves, Muçum',
+    id:'serra', name:'Serra / Noroeste', sub:'Cotiporã, Bento Gonçalves, Santa Tereza, Veranópolis, Nova Prata',
     x:0.16, y:0.10, type:'cabeceira', cota:1.2, max:3.0, vazao:80, decay:0.08,
     isSource:true, rain:0, ibge:'4302105',
     desc:'Cabeceiras de relevo acidentado. Chuvas intensas aqui geram deslizamentos e enxurradas que descem rapidamente para os vales.',
     hist2024:{peak:3.0, peakDay:2, label:'Enxurradas e deslizamentos (30/abr–01/mai)'}
   },
   taquari: {
-    id:'taquari', name:'Rio Taquari', sub:'Lajeado, Estrela, Muçum',
+    id:'taquari', name:'Rio Taquari', sub:'Lajeado, Estrela, Muçum, Encantado, Roca Sales',
     x:0.30, y:0.24, type:'rio', cota:1.85, max:5.0, vazao:250, decay:0.06,
     isSource:false, rain:0, ibge:'4311403',
     desc:'Rio "gatilho": nasce na Serra e desce por vales estreitos, subindo metros em poucas horas. Deságua no Jacuí em Triunfo, e quando está em cheia extrema, represa o próprio Jacuí — foi um dos primeiros a colapsar em 2024.',
     hist2024:{peak:5.0, peakDay:3, label:'Pico histórico em 01/mai/2024'}
   },
   jacui: {
-    id:'jacui', name:'Rio Jacuí', sub:'Depressão Central',
+    id:'jacui', name:'Rio Jacuí', sub:'Triunfo, General Câmara, Santa Maria, Cachoeira do Sul, Agudo',
     x:0.44, y:0.36, type:'rio', cota:1.65, max:4.5, vazao:180, decay:0.06,
     isSource:true, rain:0, ibge:'4322400',
     desc:'Drena o centro e noroeste do estado, amortecido pelas barragens do Alto Jacuí (Passo Real, Ernestina, Itaúba). Quando o solo satura e as barragens vertem, a onda de cheia que levaria 3-5 dias pode chegar em menos de 48h. Recebe o Taquari em Triunfo.',
     hist2024:{peak:4.5, peakDay:4, label:'Alagamento de municípios ribeirinhos (02/mai)'}
   },
   sinos: {
-    id:'sinos', name:'Rio dos Sinos', sub:'São Leopoldo, Novo Hamburgo, Canoas',
+    id:'sinos', name:'Rio dos Sinos', sub:'São Leopoldo, Novo Hamburgo, Campo Bom, Sapucaia do Sul, Taquara',
     x:0.58, y:0.40, type:'rio', cota:1.2, max:4.0, vazao:120, decay:0.06,
     isSource:true, rain:0, ibge:'4318705',
     desc:'Região metropolitana de relevo plano — a água perde velocidade e o rio fica cheio por dias, diferente da resposta rápida do Taquari.',
     hist2024:{peak:4.0, peakDay:4, label:'Canoas submersa (03–05/mai)'}
   },
   guaiba: {
-    id:'guaiba', name:'Lago Guaíba', sub:'Porto Alegre',
+    id:'guaiba', name:'Lago Guaíba', sub:'Porto Alegre, Canoas, Eldorado do Sul, Guaíba, Charqueadas',
     x:0.50, y:0.53, type:'lago', cota:2.5, max:4.77, vazao:420, decay:0.015,
     isSource:false, rain:0, ibge:'4314902',
     desc:'Funil que recebe toda a água das bacias do Jacuí, Taquari, Caí, Sinos e Gravataí. Atingiu 4,77m em 03/mai/2024. Medido no Cais Mauá em relação ao nível do mar.',
     hist2024:{peak:4.77, peakDay:5, label:'RECORDE HISTÓRICO — 4,77m em 03/mai/2024'}
   },
   lagoa: {
-    id:'lagoa', name:'Lagoa dos Patos', sub:'Pelotas, Rio Grande, São José do Norte',
+    id:'lagoa', name:'Lagoa dos Patos', sub:'Pelotas, São Lourenço do Sul, Arambaré, Camaquã, Tapes',
     x:0.54, y:0.72, type:'lagoa', cota:0.95, max:2.5, vazao:420, decay:0.004,
     isSource:false, rain:0, ibge:'4314407',
     desc:'Estuário que recebe o volume represado na região metropolitana, com dias/semanas de atraso. Ventos do quadrante Sul empurram água do mar pra dentro, represando ainda mais a saída.',
     hist2024:{peak:2.5, peakDay:14, label:'Canal São Gonçalo (Pelotas) atinge 3m'}
   },
   oceano: {
-    id:'oceano', name:'Barra / Oceano Atlântico', sub:'Rio Grande – Cassino',
+    id:'oceano', name:'Barra / Oceano Atlântico', sub:'Rio Grande, São José do Norte, Cassino, Mostardas',
     x:0.52, y:0.90, type:'oceano', cota:0.4, max:1.2, vazao:420, decay:0.004,
     isSource:false, rain:0, ibge:'4315602',
     desc:'Ponto de escoamento final, monitorado por marégrafos e boias. Marés e vento regulam a velocidade de saída da água pro oceano.',
