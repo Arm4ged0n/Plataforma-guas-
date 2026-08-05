@@ -70,9 +70,25 @@
   #mapCanvas.dragging{cursor:grabbing;}
 
   @media (max-width:640px){
-    main{ grid-template-columns:1fr; grid-template-rows:45vh 1fr; overflow-y:auto; }
-    .map-area{ height:45vh; min-height:280px; }
+    main{ grid-template-columns:1fr; grid-template-rows:45vh 1fr; overflow-y:auto; transition: all 0.3s ease; }
+    .map-area{ height:45vh; min-height:280px; transition: all 0.3s ease; }
     aside{ border-left:none; border-top:1px solid var(--line); }
+  }
+
+  /* MODO FOCO / TELA LIMPA PARA O MAPA NO MOBILE */
+  @media (max-width: 900px) {
+    body.focus-mode main {
+      grid-template-rows: 100vh 0fr !important;
+    }
+    body.focus-mode .map-area {
+      height: 100vh !important;
+      min-height: 100vh !important;
+    }
+    body.focus-mode aside {
+      display: none !important;
+      padding: 0 !important;
+      border: none !important;
+    }
   }
 
   .map-controls{ position:absolute; top:14px; right:14px; display:flex; flex-direction:column; gap:6px; z-index:5; }
@@ -311,49 +327,35 @@ const EDGES = [
 
 const NODE_BASE = {};
 
-// Cota de inundação OFICIAL de cada estação real, segundo boletins da Defesa
-// Civil RS e ANA/SGB (não é a mesma coisa que o "max" ilustrativo que usamos
-// no modo simulação — aqui é o valor real publicado, em metros, específico
-// da régua de cada estação, pois o "zero" de cada régua fica numa altura
-// diferente). Confirmado via reportagens datadas de jul-ago/2026.
 const COTA_INUNDACAO_OFICIAL = {
-  guaiba:  3.00,  // Cais Mauá C6
-  jacui:   4.67,  // Triunfo
-  sinos:   4.50,  // São Leopoldo
-  taquari: 19.00, // Estrela
+  guaiba:  3.00,
+  jacui:   4.67,
+  sinos:   4.50,
+  taquari: 19.00,
 };
 Object.values(NODES).forEach(n => NODE_BASE[n.id] = n.cota);
 Object.values(NODES).forEach(n => { n.history = []; n.lastHistoryPush = 0; });
 
-/* =========================================================
-   DADOS REAIS — ANA via ClimaRS (endpoint público, sem senha)
-   IMPORTANTE: nenhuma credencial fica no cliente. Todo o acesso
-   passa por /api/cota-rios, que roda no servidor.
-========================================================= */
 let liveState = {
   active: false,
   loading: false,
   error: null,
   lastFetch: null,
-  dataApi: {},      // {nodeId: {nivelMetros, status, statusColor, taxaMudanca, ...}}
+  dataApi: {},
   accum7d: {},
-  rainNow: {},       // {nodeId: {mmAgora, mmProxHora}}
+  rainNow: {},
 };
 
-// Coordenadas aproximadas de cada nó, usadas só pra consultar chuva atual
-// (Open-Meteo — grátis, sem chave, CORS liberado, chamado direto do navegador)
 const RAIN_COORDS = {
   serra:   { lat:-29.17, lon:-51.53 },
   taquari: { lat:-29.37, lon:-51.96 },
-  jacui:   { lat:-29.93, lon:-51.72 }, // Triunfo, onde fica a estação real
-  sinos:   { lat:-29.76, lon:-51.15 }, // São Leopoldo
-  guaiba:  { lat:-30.03, lon:-51.23 }, // Porto Alegre / Cais Mauá
-  lagoa:   { lat:-31.77, lon:-52.34 }, // Pelotas
-  oceano:  { lat:-32.03, lon:-52.10 }, // Rio Grande
+  jacui:   { lat:-29.93, lon:-51.72 },
+  sinos:   { lat:-29.76, lon:-51.15 },
+  guaiba:  { lat:-30.03, lon:-51.23 },
+  lagoa:   { lat:-31.77, lon:-52.34 },
+  oceano:  { lat:-32.03, lon:-52.10 },
 };
 
-// Retorna "yyyy-mm-ddThh" na hora local de Brasília — necessário porque a
-// Open-Meteo devolve os horários em hora local, não UTC.
 function horaLocalSaoPaulo(){
   const fmt = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Sao_Paulo',
@@ -391,8 +393,6 @@ async function fetchChuvaRealTodosNos(){
   });
 }
 
-// E-mail de destino do alerta — só existe na sessão do navegador de quem
-// configurou. Nunca fica salvo hardcoded no código-fonte.
 let alertEmailConfig = '';
 
 async function enviarAlertaEmail(n, statusText){
@@ -437,7 +437,7 @@ async function sincronizarDadosReais(){
   liveState.error = null;
   if(activeTab==='live') renderPanel();
 
-  if(!simRunning) startSim(); // liga o relógio que grava histórico — sem isso o gráfico nunca enche
+  if(!simRunning) startSim();
 
   try {
     const dados = await consultarCotaReal();
@@ -453,7 +453,6 @@ async function sincronizarDadosReais(){
 
     logEvent('Dados oficiais sincronizados (ANA via ClimaRS).', 'info');
   } catch(e){
-    // NUNCA inventa dado. Se falhar, mostra o erro — não um número aleatório.
     liveState.error = e.message;
     liveState.active = false;
     logEvent('Falha ao sincronizar dados reais: '+e.message, 'critical');
@@ -467,7 +466,7 @@ async function sincronizarDadosReais(){
         if(NODES[nodeId] && est.nivelMetros != null){
           liveState.dataApi[nodeId] = {
             nivelMetros: est.nivelMetros.toFixed(2),
-            status: 'DADO_CIEX_FURG', // ainda sem classificação oficial de alerta/inundação
+            status: 'DADO_CIEX_FURG',
             statusColor: '#3aa0ff',
             taxaMudanca: null,
             nomeEstacao: est.nomeEstacao,
@@ -492,7 +491,7 @@ async function sincronizarDadosReais(){
         if(!liveState.dataApi[id]) liveState.accum7d[id] = { totalMm: total7d };
       });
     }
-  } catch(e){ /* chuva é complementar — falha aqui não derruba o resto */ }
+  } catch(e){}
 
   try {
     await fetchChuvaRealTodosNos();
@@ -500,11 +499,9 @@ async function sincronizarDadosReais(){
     logEvent('Falha ao buscar chuva atual: '+e.message, 'alert');
   }
 
-  // Auto-atualiza chuva a cada 10 min enquanto a aba Tempo Real estiver aberta,
-  // sem precisar clicar em Sincronizar de novo
   if(!liveState.rainInterval){
     liveState.rainInterval = setInterval(async ()=>{
-      try{ await fetchChuvaRealTodosNos(); }catch(e){ /* tenta de novo no próximo ciclo */ }
+      try{ await fetchChuvaRealTodosNos(); }catch(e){}
     }, 10*60*1000);
   }
 
@@ -528,9 +525,6 @@ function updateLiveBadge(){
   }
 }
 
-/* =========================================================
-   CÁLCULOS AUXILIARES
-========================================================= */
 const FATOR_SATURACAO = 0.005;
 
 function elevacaoPropria(node){
@@ -611,9 +605,6 @@ function histDateLabel(day){
   return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
 }
 
-/* =========================================================
-   CANVAS / MAPA
-========================================================= */
 const canvas = document.getElementById('mapCanvas');
 const ctx = canvas.getContext('2d');
 let view = {scale:1, offX:0, offY:0};
@@ -627,7 +618,7 @@ function resizeCanvas(){
   canvas.height = rect.height * devicePixelRatio;
   canvas.style.width = rect.width+'px';
   canvas.style.height = rect.height+'px';
-  view = {scale:1, offX:0, offY:0}; // sempre volta a mostrar o fluxo inteiro ao redimensionar
+  view = {scale:1, offX:0, offY:0};
   drawMap();
 }
 window.addEventListener('resize', resizeCanvas);
@@ -641,9 +632,6 @@ function toScreen(nx, ny){
   return { x: px*view.scale + view.offX, y: py*view.scale + view.offY };
 }
 
-// Gotas de chuva animadas caindo sobre o nó — sem guardar estado extra,
-// a posição de cada gota é calculada a partir do relógio (Date.now()),
-// então "cai" sozinha a cada redesenho do mapa (a cada tick, ~10x/seg).
 function drawChuvaEfeito(cx, cy, r){
   const now = Date.now();
   const nGotas = 7;
@@ -651,15 +639,13 @@ function drawChuvaEfeito(cx, cy, r){
   const zonaLargura = 34 * view.scale;
 
   for(let i=0; i<nGotas; i++){
-    const seedX = (i * 37) % 100; // 0..99, espalha horizontalmente
-    const seedVel = 0.6 + (i % 3) * 0.25; // velocidades levemente diferentes
+    const seedX = (i * 37) % 100;
+    const seedVel = 0.6 + (i % 3) * 0.25;
     const ciclo = ((now * seedVel * 0.06) + i * 53) % zonaAltura;
 
     const dropX = cx + (seedX/100 - 0.5) * zonaLargura;
     const dropY = cy - r - zonaAltura + ciclo;
     const comprimento = 7 * view.scale;
-
-    // Gota mais opaca perto do nó (chegando), mais transparente longe (começando a cair)
     const opacidade = 0.25 + 0.55 * (ciclo/zonaAltura);
 
     ctx.strokeStyle = `rgba(58,160,255,${opacidade.toFixed(2)})`;
@@ -671,8 +657,6 @@ function drawChuvaEfeito(cx, cy, r){
   }
 }
 
-// Gera o HTML de um medidor horizontal comparando o nível atual com a cota
-// de inundação oficial da estação (quando existe referência confirmada).
 function medidorCotaOficial(n){
   const cotaOficial = COTA_INUNDACAO_OFICIAL[n.id];
   if(cotaOficial == null) return '';
@@ -781,9 +765,8 @@ function drawMap(){
     ctx.fillStyle=col; ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=2; ctx.stroke();
 
-    // Chuva real (Open-Meteo) ou manual (slider do simulador) — o que estiver ativo
     const chuvaReal = liveState.rainNow[n.id];
-    const mmAgora = chuvaReal ? chuvaReal.mmAgora : (n.isSource ? n.rain/10 : 0); // slider é mm/h numa escala maior
+    const mmAgora = chuvaReal ? chuvaReal.mmAgora : (n.isSource ? n.rain/10 : 0);
     if(mmAgora > 0.1){
       drawChuvaEfeito(p.x, p.y, r);
     }
@@ -875,7 +858,6 @@ function mostrarTooltip(nodeId, mouseX, mouseY){
     <div class="tt-cidades">${cidadesHtml}</div>
   `;
 
-  // Posiciona o balão perto do cursor, sem deixar estourar a borda do mapa
   const areaRect = canvas.parentElement.getBoundingClientRect();
   let left = mouseX + 16;
   let top = mouseY + 16;
@@ -1003,9 +985,6 @@ canvas.addEventListener('touchend', e=>{
   touchStartPos=null; touchMoved=false;
 }, {passive:true});
 
-/* =========================================================
-   SIMULAÇÃO EM CASCATA
-========================================================= */
 let particles = [];
 let simRunning=false;
 let simSpeed=6;
@@ -1059,7 +1038,7 @@ function tick(){
   simClock += dt;
 
   Object.values(NODES).forEach(n=>{
-    if(liveState.dataApi[n.id]) return; // nó com dado oficial não roda física simulada por cima
+    if(liveState.dataApi[n.id]) return;
     if(n.isSource && n.rain>0){
       n.cota = Math.min(n.max*1.15, n.cota + (n.rain/100)*0.06*dt);
       n.spawnAcc = (n.spawnAcc||0) + dt;
@@ -1132,17 +1111,29 @@ function updateClockUI(){
   if(el) el.textContent = `Dia ${dia} · ${String(hora).padStart(2,'0')}h · ${simRunning?'rodando':'pausado'}`;
 }
 
-/* =========================================================
-   ABAS E PAINEL LATERAL
-========================================================= */
 let activeTab='sim';
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    activeTab = btn.dataset.tab;
-    setActiveTabUI(activeTab);
-    renderPanel();
+    const tabId = btn.dataset.tab;
+    switchTab(btn, tabId);
   });
 });
+
+function switchTab(buttonElement, tabId){
+  activeTab = tabId;
+  setActiveTabUI(tabId);
+
+  // Ativa o Modo Foco automaticamente nas abas de Simulador e Tempo Real no celular
+  if(tabId === 'sim' || tabId === 'live') {
+    document.body.classList.add('focus-mode');
+  } else {
+    document.body.classList.remove('focus-mode');
+  }
+
+  renderPanel();
+  setTimeout(resizeCanvas, 300);
+}
+
 function setActiveTabUI(tab){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
 }
@@ -1253,9 +1244,7 @@ function renderStatusList(){
     `;
     row.onclick = () => {
       selectedNode = n.id;
-      activeTab = 'explore';
-      setActiveTabUI('explore');
-      renderPanel();
+      switchTab(document.querySelector('[data-tab="explore"]'), 'explore');
     };
     list.appendChild(row);
   });
@@ -1401,9 +1390,6 @@ function drawSparkline(n){
   desenharGraficoTendencia(n, 'sparkCanvas');
 }
 
-/* =========================================================
-   ABA TEMPO REAL — inclui cadastro de e-mail pra alerta
-========================================================= */
 function renderLiveTab(el){
   el.innerHTML = `
     <div class="card">
@@ -1418,7 +1404,7 @@ function renderLiveTab(el){
 
     <div class="card">
       <h3>🌧️ Radar Meteorológico Ao Vivo</h3>
-      <p>Radar oficial da Defesa Civil RS, instalado em Porto Alegre — cobre 150km de raio, atualizado a cada 5 minutos. Azul/verde = chuva fraca, amarelo/laranja = moderada, vermelho/rosa = intensa, roxo/preto = muito intensa.</p>
+      <p>Radar oficial da Defesa Civil RS, instalado em Porto Alegre — cobre 150km de raio, atualizado a cada 5 minutos.</p>
       <div style="margin-top:10px; border-radius:8px; overflow:hidden; border:1px solid var(--line);">
         <iframe src="https://radar-poa-13561874921.us-east1.run.app"
                 style="width:100%; height:320px; border:0; display:block; background:#000;"
@@ -1429,8 +1415,8 @@ function renderLiveTab(el){
 
     <div class="card">
       <h3>📧 Receber Alertas por E-mail</h3>
-      <p style="color:var(--accent2);">⚠️ Enquanto esta aba estiver ligada aqui no seu navegador, você recebe e-mail quando algum rio cruzar o limiar de alerta/crítico. Se você fechar essa aba, os alertas param — isso ainda não roda sozinho no servidor.</p>
-      <label class="field">Seu e-mail (sandbox Resend: use o mesmo e-mail da conta Resend)</label>
+      <p style="color:var(--accent2);">⚠️ Enquanto esta aba estiver ligada aqui no seu navegador, você recebe e-mail quando algum rio cruzar o limiar de alerta/crítico.</p>
+      <label class="field">Seu e-mail</label>
       <input type="email" id="alertEmailInput" placeholder="seuemail@exemplo.com" value="${alertEmailConfig}">
       <button class="btn btn-primary" id="btnSaveEmail">Salvar para esta sessão</button>
       <div id="subscribeMsg" style="margin-top:8px; font-size:12px;"></div>
@@ -1491,13 +1477,9 @@ function renderLiveStationsList(){
     list.appendChild(row);
   });
 
-  // Desenha o gráfico de cada card depois que os canvas já existem no DOM
   Object.values(NODES).forEach(n => desenharGraficoTendencia(n, 'trend-'+n.id));
 }
 
-// Gráfico compacto de tendência: histórico real (linha sólida) + projeção
-// até o próximo limiar (linha pontilhada), igual ao da aba Explorar, só
-// que direto no card, pra não precisar clicar em nada pra ver.
 function desenharGraficoTendencia(n, canvasId){
   const c = document.getElementById(canvasId);
   if(!c) return;
@@ -1530,7 +1512,6 @@ function desenharGraficoTendencia(n, canvasId){
     pontos.push({ x: pontos[pontos.length-1].x + horasProjetadas, y: alvo, proj:true });
   }
 
-  // Padding: espaço reservado pros rótulos de eixo (esquerda) e não cortar a linha (topo/baixo)
   const padL = 34*devicePixelRatio, padR = 6*devicePixelRatio;
   const padT = 10*devicePixelRatio, padB = 4*devicePixelRatio;
   const plotW = c.width - padL - padR;
@@ -1545,7 +1526,6 @@ function desenharGraficoTendencia(n, canvasId){
     py: padT + plotH - ((y-minY)/(maxY-minY||1)) * plotH
   });
 
-  // Grade horizontal sutil + rótulos de eixo Y (min/meio/max em metros)
   sctx.strokeStyle = 'rgba(138,160,196,0.12)';
   sctx.fillStyle = '#8aa0c4';
   sctx.font = `${9*devicePixelRatio}px sans-serif`;
@@ -1558,7 +1538,6 @@ function desenharGraficoTendencia(n, canvasId){
     sctx.fillText(y.toFixed(1)+'m', padL-6*devicePixelRatio, py);
   });
 
-  // Linha de limiar (alerta ou crítico) com rótulo
   const limiarPx = toPx(minX, alvo).py;
   sctx.strokeStyle = corProjecao;
   sctx.setLineDash([4,3]);
@@ -1569,7 +1548,6 @@ function desenharGraficoTendencia(n, canvasId){
   sctx.font = `bold ${8.5*devicePixelRatio}px sans-serif`;
   sctx.fillText(alvo===n.max ? 'crítico' : 'alerta', padL+3*devicePixelRatio, limiarPx-7*devicePixelRatio);
 
-  // Área preenchida sob a curva real (gradiente suave)
   const reais = pontos.filter(p=>!p.proj);
   const grad = sctx.createLinearGradient(0, padT, 0, c.height-padB);
   grad.addColorStop(0, corLinha+'55');
@@ -1584,7 +1562,6 @@ function desenharGraficoTendencia(n, canvasId){
   sctx.fillStyle = grad;
   sctx.fill();
 
-  // Linha real (histórico), mais grossa e suave
   sctx.strokeStyle = corLinha;
   sctx.lineWidth = 2.2*devicePixelRatio;
   sctx.lineJoin = 'round'; sctx.lineCap = 'round';
@@ -1592,14 +1569,12 @@ function desenharGraficoTendencia(n, canvasId){
   reais.forEach((p,i)=>{ const {px,py}=toPx(p.x,p.y); i===0?sctx.moveTo(px,py):sctx.lineTo(px,py); });
   sctx.stroke();
 
-  // Ponto destacando o valor atual, na ponta da linha real
   sctx.fillStyle = corLinha;
   sctx.beginPath();
   sctx.arc(ultimoReal.px, ultimoReal.py, 3*devicePixelRatio, 0, Math.PI*2);
   sctx.fill();
   sctx.strokeStyle = '#0a1120'; sctx.lineWidth = 1.5*devicePixelRatio; sctx.stroke();
 
-  // Projeção futura (pontilhada) até o limiar
   if(pontos.length > reais.length){
     const proj = pontos[pontos.length-1];
     const b = toPx(proj.x, proj.y);
@@ -1613,7 +1588,7 @@ function desenharGraficoTendencia(n, canvasId){
 
 window.addEventListener('load', () => {
   resizeCanvas();
-  renderPanel();
+  switchTab(document.querySelector('[data-tab="sim"]'), 'sim');
 });
 </script>
 </body>
