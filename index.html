@@ -70,8 +70,8 @@
   #mapCanvas.dragging{cursor:grabbing;}
 
   @media (max-width:640px){
-    main{ grid-template-columns:1fr; grid-template-rows:45vh 1fr; overflow-y:auto; }
-    .map-area{ height:45vh; min-height:280px; }
+    main{ grid-template-columns:1fr; grid-template-rows:60vh 1fr; overflow-y:auto; }
+    .map-area{ height:60vh; min-height:380px; }
     aside{ border-left:none; border-top:1px solid var(--line); }
   }
 
@@ -259,7 +259,7 @@ const NODES = {
   taquari: {
     id:'taquari', name:'Rio Taquari', sub:'Lajeado, Estrela, Muçum, Encantado, Roca Sales',
     x:0.30, y:0.24, type:'rio', cota:1.85, max:5.0, vazao:250, decay:0.06,
-    isSource:false, rain:0, ibge:'4311403',
+    isSource:true, rain:0, ibge:'4311403',
     desc:'Rio "gatilho": nasce na Serra e desce por vales estreitos, subindo metros em poucas horas. Deságua no Jacuí em Triunfo, e quando está em cheia extrema, represa o próprio Jacuí — foi um dos primeiros a colapsar em 2024.',
     hist2024:{peak:5.0, peakDay:3, label:'Pico histórico em 01/mai/2024'}
   },
