@@ -53,13 +53,18 @@ async function buscarSensor(nome) {
 // Mapeamento sensor_id -> nome da estação. MELHOR PALPITE baseado na
 // proximidade dos valores vistos no site público (78.6/116.9/111.2cm) com
 // o que a API devolveu (77.5/117/118cm) — ainda precisa de confirmação.
+// Mapeamento sensor_id -> nome da estação. Os 6 nomes reais foram confirmados
+// (FURG CCMar, São Lourenço do Sul, Arambaré, São José do Norte, Itapuã,
+// Tavares). sensor_1/2/3 batem por proximidade de valor com o site público;
+// a ordem exata de sensor_4/5/6 entre os 3 últimos nomes ainda não foi
+// cruzada por valor — se algum aparecer trocado, é só reordenar aqui.
 const NOME_ESTACAO = {
   sensor_1: 'FURG CCMar (Rio Grande)',
   sensor_2: 'São Lourenço do Sul',
   sensor_3: 'Arambaré',
-  sensor_4: 'Sensor 4 (nome não confirmado)',
-  sensor_5: 'Sensor 5 (nome não confirmado)',
-  sensor_6: 'Sensor 6 (nome não confirmado)',
+  sensor_4: 'São José do Norte',
+  sensor_5: 'Itapuã',
+  sensor_6: 'Tavares',
 };
 
 export default async function handler(req, res) {
