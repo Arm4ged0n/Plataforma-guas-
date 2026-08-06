@@ -465,10 +465,19 @@ async function sincronizarDadosReais(){
     if(dadosLagoa.ok && dadosLagoa.porNode){
       Object.entries(dadosLagoa.porNode).forEach(([nodeId, est])=>{
         if(NODES[nodeId] && est.nivelMetros != null){
+          const cotaOficial = est.cotaInundacaoOficial;
+          let status = 'DADO_CIEX_FURG', statusColor = '#3aa0ff';
+          if(cotaOficial != null){
+            const pct = est.nivelMetros / cotaOficial;
+            if(pct >= 1)      { status='INUNDACAO';         statusColor='#e20228'; }
+            else if(pct>=0.85){ status='ALERTA_INUNDACAO';  statusColor='#ff8c00'; }
+            else if(pct>=0.60){ status='ATENCAO_INUNDACAO'; statusColor='#ffb020'; }
+            else              { status='NORMALIDADE';       statusColor='#69a82f'; }
+            COTA_INUNDACAO_OFICIAL[nodeId] = cotaOficial; // alimenta o medidor visual também
+          }
           liveState.dataApi[nodeId] = {
             nivelMetros: est.nivelMetros.toFixed(2),
-            status: 'DADO_CIEX_FURG', // ainda sem classificação oficial de alerta/inundação
-            statusColor: '#3aa0ff',
+            status, statusColor,
             taxaMudanca: null,
             nomeEstacao: est.nomeEstacao,
             rio: nodeId==='oceano' ? 'Barra / Oceano Atlântico' : 'Lagoa dos Patos',
