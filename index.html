@@ -715,6 +715,39 @@ function medidorCotaOficial(n){
   `;
 }
 
+// Fluxo de água constante e visual em cada seta, independente da física da
+// simulação — sem isso, no modo Tempo Real (onde os nós com dado real pulam
+// a física de partículas) as setas ficavam "paradas", sem indicar o sentido
+// da água. A posição de cada bolinha vem só do relógio (Date.now()), então
+// não precisa de estado nem de a simulação estar rodando.
+function desenharFluxoAmbiente(){
+  const now = Date.now();
+  const BOLINHAS_POR_SETA = 3;
+  const VELOCIDADE = 4500; // ms pra percorrer a seta inteira — menor = mais rápido
+
+  EDGES.forEach((edge, edgeIdx)=>{
+    const a = toScreen(NODES[edge.from].x, NODES[edge.from].y);
+    const b = toScreen(NODES[edge.to].x, NODES[edge.to].y);
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 + 30*view.scale;
+
+    for(let i=0; i<BOLINHAS_POR_SETA; i++){
+      const offset = i / BOLINHAS_POR_SETA;
+      const t = ((now / VELOCIDADE) + offset + edgeIdx*0.13) % 1;
+
+      const px = (1-t)*(1-t)*a.x + 2*(1-t)*t*mx + t*t*b.x;
+      const py = (1-t)*(1-t)*a.y + 2*(1-t)*t*my + t*t*b.y;
+
+      // Some suavemente perto das pontas, pra não "nascer"/"sumir" de forma abrupta
+      const fade = Math.min(1, Math.min(t, 1-t) * 6);
+
+      ctx.beginPath();
+      ctx.arc(px, py, Math.max(1.5, 2.2*view.scale), 0, Math.PI*2);
+      ctx.fillStyle = `rgba(120,190,255,${(0.55*fade).toFixed(2)})`;
+      ctx.fill();
+    }
+  });
+}
+
 function nodeColor(n){
   const oficial = liveState.dataApi[n.id];
   if(oficial && oficial.statusColor) return oficial.statusColor;
@@ -770,6 +803,8 @@ function drawMap(){
     ctx.arc(px,py, Math.max(3,4*view.scale),0,Math.PI*2);
     ctx.fillStyle='#3aa0ff'; ctx.shadowColor='#3aa0ff'; ctx.shadowBlur=8; ctx.fill(); ctx.shadowBlur=0;
   });
+
+  desenharFluxoAmbiente();
 
   Object.values(NODES).forEach(n=>{
     const p = toScreen(n.x,n.y);
