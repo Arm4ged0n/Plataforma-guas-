@@ -376,7 +376,6 @@ function condicaoTexto(codigo){
 
 async function fetchClimaTopo() {
     try {
-        // Coordenadas de Nova Hartz / RS para o widget do topo
         const resposta = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-29.54&longitude=-50.89&current=temperature_2m,weather_code');
         const dados = await resposta.json();
         
@@ -1687,7 +1686,7 @@ function desenharGraficoTendencia(n, canvasId){
 window.addEventListener('load', () => {
   resizeCanvas();
   renderPanel();
-  fetchClimaTopo(); // Carrega a temperatura e clima inicial ao abrir a página
+  fetchClimaTopo();
 });
 </script>
 </body>
