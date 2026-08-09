@@ -376,7 +376,8 @@ function condicaoTexto(codigo){
 
 async function fetchClimaTopo() {
     try {
-        const resposta = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-29.54&longitude=-50.89&current=temperature_2m,weather_code');
+        // Alinhado com as coordenadas exatas do Rio dos Sinos / Nova Hartz (-29.76, -51.15)
+        const resposta = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&current=temperature_2m,weather_code');
         const dados = await resposta.json();
         
         if (dados && dados.current) {
