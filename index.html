@@ -99,6 +99,10 @@
   .node-tooltip .tt-label{ font-size:10px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); margin-top:6px; margin-bottom:3px; }
   .node-tooltip .tt-cidades{ font-size:12px; color:var(--text); line-height:1.5; }
   .node-tooltip .tt-cidade-risco{ color:#ff8c8c; font-weight:600; }
+  .tt-clima{
+    display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; font-size:11px;
+    color:var(--text); background:#0a1120; border-radius:6px; padding:6px 8px; margin-bottom:6px;
+  }
 
   .legend-float{
     position:absolute; top:14px; left:14px; background:rgba(16,26,46,.9); border:1px solid var(--line);
@@ -337,10 +341,10 @@ let liveState = {
   lastFetch: null,
   dataApi: {},      // {nodeId: {nivelMetros, status, statusColor, taxaMudanca, ...}}
   accum7d: {},
-  rainNow: {},       // {nodeId: {mmAgora, mmProxHora}}
+  rainNow: {},       // {nodeId: {mmAgora, mmProxHora, tempC, umidade, condicaoTexto, condicaoIcone}}
 };
 
-// Coordenadas aproximadas de cada nó, usadas só pra consultar chuva atual
+// Coordenadas aproximadas de cada nó, usadas só pra consultar chuva/clima atual
 // (Open-Meteo — grátis, sem chave, CORS liberado, chamado direto do navegador)
 const RAIN_COORDS = {
   serra:   { lat:-29.17, lon:-51.53 },
@@ -364,11 +368,24 @@ function horaLocalSaoPaulo(){
   return `${partes.year}-${partes.month}-${partes.day}T${partes.hour}`;
 }
 
+// Converte o código de condição do tempo (WMO, usado pela Open-Meteo) num
+// texto + ícone simples pro widget de clima por região.
+function condicaoTexto(codigo){
+  if(codigo===0) return {texto:'Céu limpo', icone:'☀️'};
+  if(codigo<=3) return {texto:'Parcialmente nublado', icone:'⛅'};
+  if(codigo===45||codigo===48) return {texto:'Nevoeiro', icone:'🌫️'};
+  if(codigo>=51&&codigo<=57) return {texto:'Garoa', icone:'🌦️'};
+  if(codigo>=61&&codigo<=67) return {texto:'Chuva', icone:'🌧️'};
+  if(codigo>=80&&codigo<=82) return {texto:'Pancadas de chuva', icone:'🌧️'};
+  if(codigo>=95) return {texto:'Tempestade', icone:'⛈️'};
+  return {texto:'—', icone:'🌡️'};
+}
+
 async function fetchChuvaRealTodosNos(){
   const ids = Object.keys(RAIN_COORDS);
   const lats = ids.map(id=>RAIN_COORDS[id].lat).join(',');
   const lons = ids.map(id=>RAIN_COORDS[id].lon).join(',');
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=precipitation&forecast_days=2&timezone=America%2FSao_Paulo`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=precipitation,temperature_2m,relative_humidity_2m,weathercode&forecast_days=2&timezone=America%2FSao_Paulo`;
 
   const resp = await fetch(url);
   if(!resp.ok) throw new Error('Open-Meteo respondeu '+resp.status);
@@ -384,9 +401,14 @@ async function fetchChuvaRealTodosNos(){
       i = r.hourly.time.reduce((melhor, t, k)=>
         Math.abs(t.localeCompare(horaAtual)) < Math.abs(r.hourly.time[melhor].localeCompare(horaAtual)) ? k : melhor, 0);
     }
+    const cond = condicaoTexto(r.hourly.weathercode?.[i]);
     liveState.rainNow[id] = {
       mmAgora: r.hourly.precipitation[i] ?? 0,
       mmProxHora: r.hourly.precipitation[i+1] ?? 0,
+      tempC: r.hourly.temperature_2m?.[i] ?? null,
+      umidade: r.hourly.relative_humidity_2m?.[i] ?? null,
+      condicaoTexto: cond.texto,
+      condicaoIcone: cond.icone,
     };
   });
 }
@@ -912,9 +934,21 @@ function mostrarTooltip(nodeId, mouseX, mouseY){
     ? 'Cidades abaixo podem ser afetadas pelo nível atual deste rio:'
     : 'Sem risco elevado no momento nestas cidades:';
 
+  const clima = liveState.rainNow[nodeId];
+  const climaHtml = clima ? `
+    <div class="tt-label">Clima na região agora</div>
+    <div class="tt-clima">
+      <span>${clima.condicaoIcone||'🌡️'} ${clima.condicaoTexto||'—'}</span>
+      <span>${clima.tempC!=null ? clima.tempC.toFixed(0)+'°C' : '—'}</span>
+      <span>💧 ${clima.umidade!=null ? clima.umidade.toFixed(0)+'%' : '—'}</span>
+      <span>☔ ${clima.mmAgora!=null ? clima.mmAgora.toFixed(1)+'mm/h' : '—'}</span>
+    </div>
+  ` : '';
+
   el.innerHTML = `
     <div class="tt-titulo">🌊 ${n.name}</div>
     <span class="tt-status" style="color:${risco.cor}; background:${risco.bg};">${risco.label}</span>
+    ${climaHtml}
     <div class="tt-label">${mensagemRisco}</div>
     <div class="tt-cidades">${cidadesHtml}</div>
   `;
@@ -1402,6 +1436,20 @@ function renderExploreTab(el){
     else if(pct >= 60){ badgeClass = 'b-warn'; statusText = 'Alerta'; }
   }
 
+  const clima = liveState.rainNow[n.id];
+  const climaCardHtml = clima ? `
+    <div class="card">
+      <h3>🌡️ Clima na Região Agora</h3>
+      <div class="tt-clima">
+        <span>${clima.condicaoIcone||'🌡️'} ${clima.condicaoTexto||'—'}</span>
+        <span>${clima.tempC!=null ? clima.tempC.toFixed(0)+'°C' : '—'}</span>
+        <span>💧 ${clima.umidade!=null ? clima.umidade.toFixed(0)+'%' : '—'}</span>
+        <span>☔ ${clima.mmAgora!=null ? clima.mmAgora.toFixed(1)+'mm/h' : '—'}</span>
+      </div>
+      <p style="margin-top:6px; font-size:10.5px;">Fonte: Open-Meteo</p>
+    </div>
+  ` : '';
+
   el.innerHTML = `
     <div class="card">
       <div class="node-title">${n.name}</div>
@@ -1418,6 +1466,8 @@ function renderExploreTab(el){
       <div class="stat-row"><span class="label">Medido em</span><span class="val" style="font-size:11px;">${oficial.dataHoraMedicao ? new Date(oficial.dataHoraMedicao).toLocaleString('pt-BR') : '—'}</span></div>
       ${medidorCotaOficial(n)}
     </div>` : ''}
+
+    ${climaCardHtml}
 
     <div class="card">
       <h3>Métricas</h3>
@@ -1512,6 +1562,15 @@ function renderLiveStationsList(){
   list.innerHTML = '';
   Object.values(NODES).forEach(n=>{
     const dados = liveState.dataApi[n.id];
+    const clima = liveState.rainNow[n.id];
+    const climaHtml = clima ? `
+      <div class="tt-clima" style="margin-top:8px;">
+        <span>${clima.condicaoIcone||'🌡️'} ${clima.condicaoTexto||'—'}</span>
+        <span>${clima.tempC!=null ? clima.tempC.toFixed(0)+'°C' : '—'}</span>
+        <span>💧 ${clima.umidade!=null ? clima.umidade.toFixed(0)+'%' : '—'}</span>
+        <span>☔ ${clima.mmAgora!=null ? clima.mmAgora.toFixed(1)+'mm/h' : '—'}</span>
+      </div>
+    ` : '';
     const row = document.createElement('div');
     row.style.marginBottom = '12px';
     row.style.padding = '10px';
@@ -1529,6 +1588,7 @@ function renderLiveStationsList(){
       </div>
       ${dados ? `<div class="stat-row" style="font-size:11px;"><span class="label">Status oficial</span><span class="val">${dados.status.replace('_',' ')}</span></div>` : ''}
       ${dados && dados.taxaMudanca ? `<div class="stat-row" style="font-size:11px;"><span class="label">Tendência</span><span class="val" style="font-size:11px;">${dados.taxaMudanca}</span></div>` : ''}
+      ${climaHtml}
       ${medidorCotaOficial(n)}
       <canvas class="spark" id="trend-${n.id}" style="margin-top:8px; height:70px;"></canvas>
     `;
